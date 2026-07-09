@@ -244,8 +244,16 @@
     background: #f7f7f7;
     border: 3px solid var(--border);
     border-radius: 14px;
-    padding: 12px 16px;
+    padding: 14px 16px;
     margin-bottom: 10px;
+    animation: pulse-glow-pink 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-glow-pink {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 150, 0.45); }
+    50% { box-shadow: 0 0 0 10px rgba(255, 0, 150, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .game-item { animation: none; }
   }
   .game-item .game-name {
     font-weight: 700;
@@ -255,20 +263,46 @@
   .game-item .game-datetime {
     font-size: 0.82rem;
     color: var(--muted);
-    margin-bottom: 6px;
+    margin-bottom: 10px;
   }
-  .game-item .game-code {
+  .game-code-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .game-code-label {
     font-size: 0.9rem;
     color: var(--muted);
   }
-  .game-item .game-code span {
+  .game-code-label strong {
     font-weight: 700;
     color: var(--text);
     letter-spacing: 0.5px;
   }
+  .copy-btn {
+    width: auto;
+    padding: 8px 14px;
+    background: #fff;
+    color: var(--text);
+    border: 2px solid #000;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .copy-btn.copied {
+    background: #157a3e;
+    color: #fff;
+    border-color: #157a3e;
+  }
   .game-badge {
     display: inline-block;
-    margin-top: 8px;
     padding: 3px 12px;
     border-radius: 20px;
     font-size: 0.7rem;
@@ -306,17 +340,20 @@
       <div class="game-item" data-game-code="FreovSwansR18">
         <div class="game-name">Fremantle v Sydney Round 18</div>
         <div class="game-datetime">Thursday 9 July 2026, 8:10 PM (AEST)</div>
-        <div class="game-code">Code: <span>FreovSwansR18</span></div>
+        <div class="game-code-row">
+          <span class="game-code-label">Code: <strong>FreovSwansR18</strong></span>
+          <button type="button" class="copy-btn" data-copy-code="FreovSwansR18">Copy</button>
+        </div>
         <div class="game-badge open">Open</div>
       </div>
     </div>
 
     <a class="leaderboard-link" href="/leaderboard.html">View Leaderboard →</a>
 
-    <form id="entryForm">
-      <input type="text" id="gameCode" placeholder="Game Code" autocomplete="off" required>
-      <input type="text" id="handle" placeholder="Handle (shown on leaderboard)" autocomplete="off" required>
-      <input type="tel" id="phone" placeholder="Mobile" autocomplete="off" required>
+    <form id="entryForm" novalidate>
+      <input type="text" id="gameCode" placeholder="Game Code *" autocomplete="off">
+      <input type="text" id="handle" placeholder="Handle (shown on leaderboard) *" autocomplete="off">
+      <input type="tel" id="phone" placeholder="Mobile *" autocomplete="off">
       <button type="submit" id="submitBtn">Get My 4 Players</button>
     </form>
 
@@ -367,6 +404,14 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="validationModal">
+    <div class="modal-box">
+      <button class="modal-close" type="button" data-close="validationModal">✕</button>
+      <h3>Missing Info</h3>
+      <p>You must fill in all fields to claim a prize.</p>
+    </div>
+  </div>
+
 <script>
   const form = document.getElementById('entryForm');
   const submitBtn = document.getElementById('submitBtn');
@@ -405,6 +450,28 @@
     }
   }
 
+  // ---- Copy game code button ----
+  document.querySelectorAll('.copy-btn[data-copy-code]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const code = btn.dataset.copyCode;
+      try {
+        await navigator.clipboard.writeText(code);
+      } catch (err) {
+        // clipboard API unavailable - still fill the field below
+      }
+      const gameCodeField = document.getElementById('gameCode');
+      if (gameCodeField) gameCodeField.value = code;
+
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  });
+
   refreshGameStatuses();
   setInterval(refreshGameStatuses, 15000);
 
@@ -434,6 +501,11 @@
     const game_code = document.getElementById('gameCode').value.trim();
     const handle = document.getElementById('handle').value.trim();
     const phone = document.getElementById('phone').value.trim();
+
+    if (!game_code || !handle || !phone) {
+      openModal('validationModal');
+      return;
+    }
 
     if (closedCodes.has(game_code.toUpperCase())) {
       messageEl.textContent = 'Entries are closed for this game — it has already started.';
