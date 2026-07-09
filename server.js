@@ -206,12 +206,24 @@ app.get('/admin/leaderboard/:code', checkAdminPassword, async (req, res) => {
 app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
   const gameCode = String(req.body.game_code || '').trim().toUpperCase();
   const handle = String(req.body.handle || '').trim();
-  const points = parseInt(req.body.points, 10);
+  const pointsToAdd = parseInt(req.body.points, 10);
   const holdingPlayer = String(req.body.holding_player || '').trim();
 
-  if (!gameCode || !handle || Number.isNaN(points)) {
+  if (!gameCode || !handle || Number.isNaN(pointsToAdd)) {
     return res.status(400).json({ error: 'game_code, handle, and points are required.' });
   }
+
+  // Look up whatever's already there so we ADD to it, not overwrite it.
+  const { data: existing, error: fetchErr } = await supabase
+    .from('holding_leaderboard')
+    .select('points')
+    .eq('game_code', gameCode)
+    .eq('handle', handle)
+    .maybeSingle();
+
+  if (fetchErr) return res.status(500).json({ error: fetchErr.message });
+
+  const newTotal = (existing ? existing.points : 0) + pointsToAdd;
 
   const { error } = await supabase
     .from('holding_leaderboard')
@@ -219,7 +231,7 @@ app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
       {
         game_code: gameCode,
         handle,
-        points,
+        points: newTotal,
         holding_player: holdingPlayer || null,
         updated_at: new Date().toISOString(),
       },
@@ -227,7 +239,7 @@ app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
     );
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
+  res.json({ ok: true, new_total: newTotal });
 });
 
 // Admin: remove a leaderboard entry
@@ -249,11 +261,15 @@ app.delete('/admin/leaderboard/:code/:handle', checkAdminPassword, async (req, r
 app.post('/admin/quarter-leaders', checkAdminPassword, async (req, res) => {
   const gameCode = String(req.body.game_code || '').trim().toUpperCase();
   const quarter = parseInt(req.body.quarter, 10);
-  const handle = String(req.body.handle || '').trim();
-  const holdingPlayer = String(req.body.holding_player || '').trim();
+  const noLeader = req.body.no_leader === true || req.body.no_leader === 'true';
+  const handle = noLeader ? null : String(req.body.handle || '').trim();
+  const holdingPlayer = noLeader ? null : (String(req.body.holding_player || '').trim() || null);
 
-  if (!gameCode || !handle || ![1, 2, 3, 4].includes(quarter)) {
-    return res.status(400).json({ error: 'game_code, quarter (1-4), and handle are required.' });
+  if (!gameCode || ![1, 2, 3, 4].includes(quarter)) {
+    return res.status(400).json({ error: 'game_code and quarter (1-4) are required.' });
+  }
+  if (!noLeader && !handle) {
+    return res.status(400).json({ error: 'Enter a handle, or tick "No leader this quarter".' });
   }
 
   const { error } = await supabase
@@ -263,7 +279,7 @@ app.post('/admin/quarter-leaders', checkAdminPassword, async (req, res) => {
         game_code: gameCode,
         quarter,
         handle,
-        holding_player: holdingPlayer || null,
+        holding_player: holdingPlayer,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'game_code,quarter' }

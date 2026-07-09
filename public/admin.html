@@ -114,6 +114,16 @@
   .lb-form input { margin-bottom: 0; }
   .lb-form button { height: 46px; }
   .row-actions .del-btn { background: #4d1f1f; }
+  .no-leader-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    cursor: pointer;
+  }
+  .no-leader-check input { width: auto; margin: 0; }
 </style>
 </head>
 <body>
@@ -200,6 +210,11 @@
         </div>
         <button id="qlSaveBtn">Save</button>
       </div>
+
+      <label class="no-leader-check">
+        <input type="checkbox" id="qlNoLeader">
+        No leader this quarter (nobody held the ball at the mark)
+      </label>
 
       <table id="qlTable" style="display:none;">
         <thead>
@@ -371,6 +386,7 @@
   const qlQuarterInput = document.getElementById('qlQuarter');
   const qlHandleInput = document.getElementById('qlHandle');
   const qlHoldingPlayerInput = document.getElementById('qlHoldingPlayer');
+  const qlNoLeaderInput = document.getElementById('qlNoLeader');
   const qlTable = document.getElementById('qlTable');
   const qlBody = document.getElementById('qlBody');
 
@@ -379,6 +395,16 @@
     if (code) loadQuarterLeaders(code);
   });
   document.getElementById('qlSaveBtn').addEventListener('click', saveQuarterLeader);
+
+  qlNoLeaderInput.addEventListener('change', () => {
+    const disabled = qlNoLeaderInput.checked;
+    qlHandleInput.disabled = disabled;
+    qlHoldingPlayerInput.disabled = disabled;
+    if (disabled) {
+      qlHandleInput.value = '';
+      qlHoldingPlayerInput.value = '';
+    }
+  });
 
   async function loadQuarterLeaders(gameCode) {
     try {
@@ -392,7 +418,7 @@
       qlBody.innerHTML = entries.map(e => `
         <tr>
           <td>Q${e.quarter}</td>
-          <td>${e.handle}</td>
+          <td>${e.handle || 'No leader'}</td>
           <td>${e.holding_player || ''}</td>
           <td class="row-actions">
             <button class="del-btn" onclick="deleteQuarterLeader('${qlGameCodeInput.value.trim()}', ${e.quarter})">Delete</button>
@@ -407,22 +433,28 @@
   async function saveQuarterLeader() {
     const gameCode = qlGameCodeInput.value.trim();
     const quarter = qlQuarterInput.value;
+    const noLeader = qlNoLeaderInput.checked;
     const handle = qlHandleInput.value.trim();
     const holdingPlayer = qlHoldingPlayerInput.value.trim();
 
-    if (!gameCode || !handle) {
-      alert('Enter a game code and handle.');
+    if (!gameCode) {
+      alert('Enter a game code.');
+      return;
+    }
+    if (!noLeader && !handle) {
+      alert('Enter a handle, or tick "No leader this quarter".');
       return;
     }
 
-    const confirmed = confirm(`Save Quarter ${quarter} leader as "${handle}" for ${gameCode}?`);
+    const summary = noLeader ? 'No leader (nobody held the ball)' : `"${handle}"`;
+    const confirmed = confirm(`Save Quarter ${quarter} leader as ${summary} for ${gameCode}?`);
     if (!confirmed) return;
 
     try {
       const res = await fetch(`/admin/quarter-leaders?pw=${encodeURIComponent(currentPw)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_code: gameCode, quarter, handle, holding_player: holdingPlayer })
+        body: JSON.stringify({ game_code: gameCode, quarter, handle, holding_player: holdingPlayer, no_leader: noLeader })
       });
       if (!res.ok) {
         alert('Could not save quarter leader.');
@@ -430,6 +462,9 @@
       }
       qlHandleInput.value = '';
       qlHoldingPlayerInput.value = '';
+      qlNoLeaderInput.checked = false;
+      qlHandleInput.disabled = false;
+      qlHoldingPlayerInput.disabled = false;
       loadQuarterLeaders(gameCode);
     } catch (err) {
       alert('Network error.');

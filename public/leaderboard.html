@@ -307,11 +307,24 @@
 
       const rows = [1, 2, 3, 4].map(q => {
         const row = byQuarter[q];
+        let leaderText = '—';
+        let holdingText = 'Not posted yet';
+
+        if (row) {
+          if (row.handle) {
+            leaderText = row.handle;
+            holdingText = row.holding_player || '';
+          } else {
+            leaderText = 'No leader';
+            holdingText = 'Nobody was holding';
+          }
+        }
+
         return `
           <tr>
             <td class="quarter">Q${q}</td>
-            <td>${row ? row.handle : '—'}</td>
-            <td class="holding">${row && row.holding_player ? row.holding_player : (row ? '' : 'Not posted yet')}</td>
+            <td>${leaderText}</td>
+            <td class="holding">${holdingText}</td>
           </tr>
         `;
       }).join('');
