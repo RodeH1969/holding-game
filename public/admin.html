@@ -76,6 +76,34 @@
   }
   .badge.open { background: #1f4d2e; color: #7de89a; }
   .badge.closed { background: #4d1f1f; color: #ff9a9a; }
+
+  .lb-section {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .lb-section h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
+  .lb-form {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .lb-form > div { flex: 1; min-width: 120px; }
+  .lb-form label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .lb-form input { margin-bottom: 0; }
+  .lb-form button { height: 46px; }
+  .row-actions .del-btn { background: #4d1f1f; }
 </style>
 </head>
 <body>
@@ -97,6 +125,36 @@
       </thead>
       <tbody id="gamesBody"></tbody>
     </table>
+
+    <div class="lb-section">
+      <h2>Leaderboard</h2>
+      <div class="lb-form">
+        <div>
+          <label>Game code</label>
+          <input type="text" id="lbGameCode" placeholder="e.g. FREOVSWANSR18">
+        </div>
+        <button id="lbLoadBtn">Load</button>
+      </div>
+
+      <div class="lb-form">
+        <div>
+          <label>Handle</label>
+          <input type="text" id="lbHandle" placeholder="Handle">
+        </div>
+        <div>
+          <label>Points</label>
+          <input type="number" id="lbPoints" placeholder="0" value="0">
+        </div>
+        <button id="lbSaveBtn">Save</button>
+      </div>
+
+      <table id="lbTable" style="display:none;">
+        <thead>
+          <tr><th>Handle</th><th>Points</th><th></th></tr>
+        </thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -133,6 +191,7 @@
             ${g.status === 'open'
               ? `<button class="stop-btn" onclick="setStatus('${g.game_code}', 'closed')">Stop Entries</button>`
               : `<button onclick="setStatus('${g.game_code}', 'open')">Reopen</button>`}
+            <button onclick="selectForLeaderboard('${g.game_code}')">Leaderboard</button>
           </td>
         </tr>
       `).join('') || '<tr><td colspan="4">No games yet.</td></tr>';
@@ -158,6 +217,91 @@
         return;
       }
       loadGames();
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  // ---------------- Leaderboard ----------------
+  const lbGameCodeInput = document.getElementById('lbGameCode');
+  const lbHandleInput = document.getElementById('lbHandle');
+  const lbPointsInput = document.getElementById('lbPoints');
+  const lbTable = document.getElementById('lbTable');
+  const lbBody = document.getElementById('lbBody');
+
+  document.getElementById('lbLoadBtn').addEventListener('click', () => {
+    const code = lbGameCodeInput.value.trim();
+    if (code) loadLeaderboard(code);
+  });
+  document.getElementById('lbSaveBtn').addEventListener('click', saveLeaderboardEntry);
+
+  function selectForLeaderboard(gameCode) {
+    lbGameCodeInput.value = gameCode;
+    loadLeaderboard(gameCode);
+    document.querySelector('.lb-section').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function loadLeaderboard(gameCode) {
+    try {
+      const res = await fetch(`/admin/leaderboard/${encodeURIComponent(gameCode)}?pw=${encodeURIComponent(currentPw)}`);
+      if (!res.ok) {
+        alert('Could not load leaderboard.');
+        return;
+      }
+      const entries = await res.json();
+      lbTable.style.display = entries.length ? 'table' : 'none';
+      lbBody.innerHTML = entries.map(e => `
+        <tr>
+          <td>${e.handle}</td>
+          <td>${e.points}</td>
+          <td class="row-actions">
+            <button class="del-btn" onclick="deleteLeaderboardEntry('${lbGameCodeInput.value.trim()}', '${e.handle}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  async function saveLeaderboardEntry() {
+    const gameCode = lbGameCodeInput.value.trim();
+    const handle = lbHandleInput.value.trim();
+    const points = lbPointsInput.value;
+
+    if (!gameCode || !handle) {
+      alert('Enter a game code and handle.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/leaderboard?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game_code: gameCode, handle, points })
+      });
+      if (!res.ok) {
+        alert('Could not save entry.');
+        return;
+      }
+      lbHandleInput.value = '';
+      lbPointsInput.value = '0';
+      loadLeaderboard(gameCode);
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  async function deleteLeaderboardEntry(gameCode, handle) {
+    try {
+      const res = await fetch(`/admin/leaderboard/${encodeURIComponent(gameCode)}/${encodeURIComponent(handle)}?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        alert('Could not delete entry.');
+        return;
+      }
+      loadLeaderboard(gameCode);
     } catch (err) {
       alert('Network error.');
     }

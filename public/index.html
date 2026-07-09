@@ -170,6 +170,54 @@
   }
   .game-badge.open { background: #dcf5e3; color: #157a3e; }
   .game-badge.closed { background: #fbdcdc; color: #b31d1d; }
+
+  .leaderboard-link {
+    display: block;
+    text-align: center;
+    margin: -8px 0 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 2px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .important-box {
+    border: 5px solid #000;
+    border-radius: 14px;
+    padding: 18px 16px;
+    margin: 22px 0 8px;
+    animation: pulse-glow 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(209, 0, 0, 0.45); }
+    50% { box-shadow: 0 0 0 10px rgba(209, 0, 0, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .important-box { animation: none; }
+  }
+  .important-box h4 {
+    color: #d10000;
+    font-weight: 800;
+    font-size: 1rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px;
+  }
+  .important-box p {
+    color: #d10000;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: center;
+    margin: 0 0 12px;
+  }
+  .important-box p:last-child { margin-bottom: 0; }
+  .important-box strong { font-weight: 800; }
 </style>
 </head>
 <body>
@@ -185,8 +233,11 @@
       </div>
     </div>
 
+    <a class="leaderboard-link" href="/leaderboard.html">View Leaderboard →</a>
+
     <form id="entryForm">
       <input type="text" id="gameCode" placeholder="Game Code" autocomplete="off" required>
+      <input type="text" id="handle" placeholder="Handle (shown on leaderboard)" autocomplete="off" required>
       <input type="tel" id="phone" placeholder="Mobile" autocomplete="off" required>
       <button type="submit" id="submitBtn">Get My 4 Players</button>
     </form>
@@ -210,6 +261,13 @@
       </div>
 
       <img class="prize-img" src="/carton_of_guinness_cans.png" alt="Guinness Draught 24 pack prize">
+
+      <div class="important-box">
+        <h4>Important!</h4>
+        <p>The Games Master will post the official results after each quarter in the Leaderboard tab.</p>
+        <p>To claim Prize 1: The player who is leading at the 15:00 mark of the 4th quarter must text the Games Master before the final siren. The text message must say:<br><strong>"LEADER"</strong></p>
+        <p>To claim Prize 2: Text the Games Master before the final siren of the 4th quarter. The text message must say:<br><strong>"WINNER"</strong></p>
+      </div>
     </div>
   </div>
 
@@ -223,6 +281,11 @@
   // ---- Live open/closed status for each listed game ----
   const gameItems = document.querySelectorAll('.game-item[data-game-code]');
   const closedCodes = new Set();
+
+  const leaderboardLink = document.querySelector('.leaderboard-link');
+  if (leaderboardLink && gameItems.length) {
+    leaderboardLink.href = `/leaderboard.html?code=${encodeURIComponent(gameItems[0].dataset.gameCode)}`;
+  }
 
   async function refreshGameStatuses() {
     for (const item of gameItems) {
@@ -255,6 +318,7 @@
     resultEl.classList.remove('show');
 
     const game_code = document.getElementById('gameCode').value.trim();
+    const handle = document.getElementById('handle').value.trim();
     const phone = document.getElementById('phone').value.trim();
 
     if (closedCodes.has(game_code.toUpperCase())) {
@@ -269,7 +333,7 @@
       const res = await fetch('/api/enter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_code, phone })
+        body: JSON.stringify({ game_code, handle, phone })
       });
       const data = await res.json();
 

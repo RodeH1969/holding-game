@@ -51,12 +51,16 @@ app.post('/api/enter', async (req, res) => {
   try {
     const gameCode = String(req.body.game_code || '').trim().toUpperCase();
     const phone = normalisePhone(req.body.phone);
+    const handle = String(req.body.handle || '').trim();
 
     if (!gameCode) {
       return res.status(400).json({ error: 'Enter a game code.' });
     }
     if (!phone) {
       return res.status(400).json({ error: 'Enter a valid mobile number (04... or 614...).' });
+    }
+    if (!handle) {
+      return res.status(400).json({ error: 'Enter a handle (name shown on the leaderboard).' });
     }
 
     // Already entered this game with this phone? Return the same combo again.
@@ -96,6 +100,7 @@ app.post('/api/enter', async (req, res) => {
     const { error: insertErr } = await supabase.from('holding_entries').insert({
       game_code: gameCode,
       phone,
+      handle,
       combo_index: nextIndex,
       combo_text: players.join('|'),
     });
@@ -121,6 +126,20 @@ app.get('/api/game-status/:code', async (req, res) => {
   // A game that hasn't had its first entry yet doesn't have a row —
   // treat that as open, since it will open on first use.
   res.json({ game_code: gameCode, status: data ? data.status : 'open' });
+});
+
+// ---------- Public: leaderboard for a game ----------
+app.get('/api/leaderboard/:code', async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const { data, error } = await supabase
+    .from('holding_leaderboard')
+    .select('handle, points, updated_at')
+    .eq('game_code', gameCode)
+    .order('points', { ascending: false })
+    .order('updated_at', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 // ---------- Admin auth ----------
@@ -156,6 +175,56 @@ app.post('/admin/games/:code/status', checkAdminPassword, async (req, res) => {
   res.json({ game_code: gameCode, status });
 });
 
+// Admin: view leaderboard for a game (same data as public endpoint, kept
+// separate so the admin page doesn't depend on the public route's shape)
+app.get('/admin/leaderboard/:code', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const { data, error } = await supabase
+    .from('holding_leaderboard')
+    .select('handle, points, updated_at')
+    .eq('game_code', gameCode)
+    .order('points', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// Admin: add or update a handle's points for a game
+app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.body.game_code || '').trim().toUpperCase();
+  const handle = String(req.body.handle || '').trim();
+  const points = parseInt(req.body.points, 10);
+
+  if (!gameCode || !handle || Number.isNaN(points)) {
+    return res.status(400).json({ error: 'game_code, handle, and points are required.' });
+  }
+
+  const { error } = await supabase
+    .from('holding_leaderboard')
+    .upsert(
+      { game_code: gameCode, handle, points, updated_at: new Date().toISOString() },
+      { onConflict: 'game_code,handle' }
+    );
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Admin: remove a leaderboard entry
+app.delete('/admin/leaderboard/:code/:handle', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const handle = String(req.params.handle || '').trim();
+
+  const { error } = await supabase
+    .from('holding_leaderboard')
+    .delete()
+    .eq('game_code', gameCode)
+    .eq('handle', handle);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // Download an .xlsx snapshot of entries. game_code=ALL for everything.
 app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
   try {
@@ -163,7 +232,7 @@ app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
 
     let query = supabase
       .from('holding_entries')
-      .select('game_code, phone, combo_text, created_at')
+      .select('game_code, phone, handle, combo_text, created_at')
       .order('created_at', { ascending: true });
 
     if (gameCode !== 'ALL') {
@@ -177,6 +246,7 @@ app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
     const sheet = workbook.addWorksheet('Entries');
     sheet.columns = [
       { header: 'Game Code', key: 'game_code', width: 14 },
+      { header: 'Handle', key: 'handle', width: 16 },
       { header: 'Phone', key: 'phone', width: 16 },
       { header: 'Player 1', key: 'p1', width: 20 },
       { header: 'Player 2', key: 'p2', width: 20 },
@@ -190,6 +260,7 @@ app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
       const [p1, p2, p3, p4] = row.combo_text.split('|');
       sheet.addRow({
         game_code: row.game_code,
+        handle: row.handle || '',
         phone: row.phone,
         p1,
         p2,
