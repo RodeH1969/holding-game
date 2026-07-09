@@ -381,10 +381,10 @@
     loadLeaderboard(initialCode);
   }
 
-  // Refresh every 15s so results appear live as the Games Master posts them
+  // Refresh every 5s so results appear live as the Games Master posts them
   setInterval(() => {
     if (currentCode) loadLeaderboard(currentCode);
-  }, 15000);
+  }, 5000);
 
   // ---- Claim popup ----
   function openModal(id) {
