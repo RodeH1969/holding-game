@@ -142,6 +142,19 @@ app.get('/api/leaderboard/:code', async (req, res) => {
   res.json(data);
 });
 
+// ---------- Public: quarter-by-quarter leaders ----------
+app.get('/api/quarter-leaders/:code', async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const { data, error } = await supabase
+    .from('holding_quarter_leaders')
+    .select('quarter, handle, holding_player, updated_at')
+    .eq('game_code', gameCode)
+    .order('quarter', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // ---------- Admin auth ----------
 function checkAdminPassword(req, res, next) {
   const pw = req.query.pw || req.headers['x-admin-password'];
@@ -227,6 +240,49 @@ app.delete('/admin/leaderboard/:code/:handle', checkAdminPassword, async (req, r
     .delete()
     .eq('game_code', gameCode)
     .eq('handle', handle);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Admin: set/update the leader for a given quarter
+app.post('/admin/quarter-leaders', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.body.game_code || '').trim().toUpperCase();
+  const quarter = parseInt(req.body.quarter, 10);
+  const handle = String(req.body.handle || '').trim();
+  const holdingPlayer = String(req.body.holding_player || '').trim();
+
+  if (!gameCode || !handle || ![1, 2, 3, 4].includes(quarter)) {
+    return res.status(400).json({ error: 'game_code, quarter (1-4), and handle are required.' });
+  }
+
+  const { error } = await supabase
+    .from('holding_quarter_leaders')
+    .upsert(
+      {
+        game_code: gameCode,
+        quarter,
+        handle,
+        holding_player: holdingPlayer || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'game_code,quarter' }
+    );
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Admin: clear a quarter's leader
+app.delete('/admin/quarter-leaders/:code/:quarter', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const quarter = parseInt(req.params.quarter, 10);
+
+  const { error } = await supabase
+    .from('holding_quarter_leaders')
+    .delete()
+    .eq('game_code', gameCode)
+    .eq('quarter', quarter);
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });

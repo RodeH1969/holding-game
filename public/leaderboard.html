@@ -111,6 +111,137 @@
     border: 3px solid var(--border);
     border-radius: 14px;
   }
+
+  .claim-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    margin-bottom: 20px;
+    background: #fff;
+    color: var(--text);
+    border: 3px solid #000;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    animation: pulse-glow-red 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-glow-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(209, 0, 0, 0.45); }
+    50% { box-shadow: 0 0 0 10px rgba(209, 0, 0, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .claim-btn { animation: none; }
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: #fff;
+    border: 5px solid #000;
+    border-radius: 16px;
+    max-width: 400px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px 20px;
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    border: 2px solid #000;
+    color: #000;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+  .modal-box h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-align: center;
+    margin: 0 20px 16px;
+    color: #d10000;
+  }
+  .modal-box p {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #d10000;
+    margin: 0 0 16px;
+    text-align: center;
+    font-weight: 700;
+  }
+  .modal-box p:last-child { margin-bottom: 0; }
+  .modal-box strong { font-weight: 800; }
+  .pulse-leader {
+    display: inline-block;
+    animation: pulse-text-red 1s ease-in-out infinite;
+  }
+  @keyframes pulse-text-red {
+    0%, 100% { color: #d10000; transform: scale(1); }
+    50% { color: #ff0000; transform: scale(1.15); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse-leader { animation: none; }
+  }
+
+  .ticker {
+    overflow: hidden;
+    white-space: nowrap;
+    background: #ff2fa0;
+    border: 3px solid #ff2fa0;
+    border-radius: 8px;
+    padding: 8px 0;
+    margin-bottom: 20px;
+  }
+  .ticker-track {
+    display: inline-flex;
+    animation: ticker-scroll 14s linear infinite;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .ticker-track span {
+    padding-right: 40px;
+    white-space: nowrap;
+  }
+  @keyframes ticker-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track { animation: none; }
+  }
+
+  .section-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 24px 0 10px;
+  }
+  .section-title:first-of-type { margin-top: 0; }
+  td.quarter { font-weight: 800; width: 60px; }
 </style>
 </head>
 <body>
@@ -119,21 +250,36 @@
     <h1>Leaderboard</h1>
     <a class="back-link" href="/index.html">← Back to entry</a>
 
+    <div class="ticker">
+      <div class="ticker-track">
+        <span>Prizes brought to you by Black Sheep Bottleo The Gap</span>
+        <span>Prizes brought to you by Black Sheep Bottleo The Gap</span>
+      </div>
+    </div>
+
+    <button type="button" class="claim-btn" id="claimBtn">How to Claim Prizes</button>
+
     <form class="code-form" id="codeForm">
       <input type="text" id="gameCodeInput" placeholder="Game code" autocomplete="off" required>
       <button type="submit">View</button>
     </form>
 
-    
-    <div style="border:3px solid #000;border-radius:14px;padding:16px;margin:0 0 20px;text-align:center;background:#fff7f7;">
-      <div style="font-weight:800;font-size:1.1rem;margin-bottom:10px;">PRIZE CLAIMS</div>
-      <div><strong>Prize 1</strong><br>Text "<strong>LEADER</strong>"<br>to Game Master<br><strong>0459 754 708</strong></div>
-      <hr>
-      <div><strong>Prize 2</strong><br>Text "<strong>WINNER</strong>"<br>to Game Master<br><strong>0459 754 708</strong></div>
-    </div>
-
     <div class="game-label" id="gameLabel"></div>
+
+    <div class="section-title">Quarter Leaders</div>
+    <div id="quarterWrap"></div>
+
+    <div class="section-title">Total Points</div>
     <div id="boardWrap"></div>
+  </div>
+
+  <div class="modal-overlay" id="claimModal">
+    <div class="modal-box">
+      <button class="modal-close" type="button" data-close="claimModal">✕</button>
+      <h3>How to Claim Prizes</h3>
+      <p>Prize 1<br>Text <strong class="pulse-leader">"LEADER"</strong><br>to Game Master 0459 754 708</p>
+      <p>Prize 2<br>Text <strong>"WINNER"</strong><br>to Game Master 0459 754 708</p>
+    </div>
   </div>
 
 <script>
@@ -141,13 +287,52 @@
   const gameCodeInput = document.getElementById('gameCodeInput');
   const gameLabel = document.getElementById('gameLabel');
   const boardWrap = document.getElementById('boardWrap');
+  const quarterWrap = document.getElementById('quarterWrap');
 
   let currentCode = '';
+
+  async function loadQuarterLeaders(code) {
+    quarterWrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        quarterWrap.innerHTML = '<div class="empty-state">Could not load quarter leaders.</div>';
+        return;
+      }
+
+      const byQuarter = {};
+      data.forEach(row => { byQuarter[row.quarter] = row; });
+
+      const rows = [1, 2, 3, 4].map(q => {
+        const row = byQuarter[q];
+        return `
+          <tr>
+            <td class="quarter">Q${q}</td>
+            <td>${row ? row.handle : '—'}</td>
+            <td class="holding">${row && row.holding_player ? row.holding_player : (row ? '' : 'Not posted yet')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      quarterWrap.innerHTML = `
+        <table>
+          <thead><tr><th>Qtr</th><th>Leader</th><th>Holding</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    } catch (err) {
+      quarterWrap.innerHTML = '<div class="empty-state">Network error. Try again.</div>';
+    }
+  }
 
   async function loadLeaderboard(code) {
     currentCode = code.toUpperCase();
     gameLabel.innerHTML = `Standings for <span>${currentCode}</span>`;
     boardWrap.innerHTML = '<div class="empty-state">Loading...</div>';
+
+    loadQuarterLeaders(currentCode);
 
     try {
       const res = await fetch(`/api/leaderboard/${encodeURIComponent(currentCode)}`);
@@ -200,6 +385,23 @@
   setInterval(() => {
     if (currentCode) loadLeaderboard(currentCode);
   }, 15000);
+
+  // ---- Claim popup ----
+  function openModal(id) {
+    document.getElementById(id).classList.add('show');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+  document.getElementById('claimBtn').addEventListener('click', () => openModal('claimModal'));
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
 </script>
 </body>
 </html>

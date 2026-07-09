@@ -39,6 +39,16 @@
     color: var(--text);
     font-size: 1rem;
   }
+  select {
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+  }
   button {
     padding: 12px 20px;
     background: var(--accent);
@@ -159,6 +169,45 @@
         <tbody id="lbBody"></tbody>
       </table>
     </div>
+
+    <div class="lb-section">
+      <h2>Quarter Leaders</h2>
+      <div class="lb-form">
+        <div>
+          <label>Game code</label>
+          <input type="text" id="qlGameCode" placeholder="e.g. FREOVSWANSR18">
+        </div>
+        <button id="qlLoadBtn">Load</button>
+      </div>
+
+      <div class="lb-form">
+        <div>
+          <label>Quarter</label>
+          <select id="qlQuarter">
+            <option value="1">Quarter 1</option>
+            <option value="2">Quarter 2</option>
+            <option value="3">Quarter 3</option>
+            <option value="4">Quarter 4</option>
+          </select>
+        </div>
+        <div>
+          <label>Handle</label>
+          <input type="text" id="qlHandle" placeholder="Handle">
+        </div>
+        <div>
+          <label>Player Holding Ball</label>
+          <input type="text" id="qlHoldingPlayer" placeholder="e.g. 4 B. Grundy">
+        </div>
+        <button id="qlSaveBtn">Save</button>
+      </div>
+
+      <table id="qlTable" style="display:none;">
+        <thead>
+          <tr><th>Quarter</th><th>Leader</th><th>Holding</th><th></th></tr>
+        </thead>
+        <tbody id="qlBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -243,6 +292,8 @@
   function selectForLeaderboard(gameCode) {
     lbGameCodeInput.value = gameCode;
     loadLeaderboard(gameCode);
+    qlGameCodeInput.value = gameCode;
+    loadQuarterLeaders(gameCode);
     document.querySelector('.lb-section').scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -310,6 +361,88 @@
         return;
       }
       loadLeaderboard(gameCode);
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  // ---------------- Quarter Leaders ----------------
+  const qlGameCodeInput = document.getElementById('qlGameCode');
+  const qlQuarterInput = document.getElementById('qlQuarter');
+  const qlHandleInput = document.getElementById('qlHandle');
+  const qlHoldingPlayerInput = document.getElementById('qlHoldingPlayer');
+  const qlTable = document.getElementById('qlTable');
+  const qlBody = document.getElementById('qlBody');
+
+  document.getElementById('qlLoadBtn').addEventListener('click', () => {
+    const code = qlGameCodeInput.value.trim();
+    if (code) loadQuarterLeaders(code);
+  });
+  document.getElementById('qlSaveBtn').addEventListener('click', saveQuarterLeader);
+
+  async function loadQuarterLeaders(gameCode) {
+    try {
+      const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(gameCode)}`);
+      if (!res.ok) {
+        alert('Could not load quarter leaders.');
+        return;
+      }
+      const entries = await res.json();
+      qlTable.style.display = entries.length ? 'table' : 'none';
+      qlBody.innerHTML = entries.map(e => `
+        <tr>
+          <td>Q${e.quarter}</td>
+          <td>${e.handle}</td>
+          <td>${e.holding_player || ''}</td>
+          <td class="row-actions">
+            <button class="del-btn" onclick="deleteQuarterLeader('${qlGameCodeInput.value.trim()}', ${e.quarter})">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  async function saveQuarterLeader() {
+    const gameCode = qlGameCodeInput.value.trim();
+    const quarter = qlQuarterInput.value;
+    const handle = qlHandleInput.value.trim();
+    const holdingPlayer = qlHoldingPlayerInput.value.trim();
+
+    if (!gameCode || !handle) {
+      alert('Enter a game code and handle.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/quarter-leaders?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game_code: gameCode, quarter, handle, holding_player: holdingPlayer })
+      });
+      if (!res.ok) {
+        alert('Could not save quarter leader.');
+        return;
+      }
+      qlHandleInput.value = '';
+      qlHoldingPlayerInput.value = '';
+      loadQuarterLeaders(gameCode);
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  async function deleteQuarterLeader(gameCode, quarter) {
+    try {
+      const res = await fetch(`/admin/quarter-leaders/${encodeURIComponent(gameCode)}/${quarter}?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        alert('Could not delete quarter leader.');
+        return;
+      }
+      loadQuarterLeaders(gameCode);
     } catch (err) {
       alert('Network error.');
     }
