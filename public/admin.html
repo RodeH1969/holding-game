@@ -145,12 +145,16 @@
           <label>Points</label>
           <input type="number" id="lbPoints" placeholder="0" value="0">
         </div>
+        <div>
+          <label>Player Holding Ball</label>
+          <input type="text" id="lbHoldingPlayer" placeholder="e.g. 4 B. Grundy">
+        </div>
         <button id="lbSaveBtn">Save</button>
       </div>
 
       <table id="lbTable" style="display:none;">
         <thead>
-          <tr><th>Handle</th><th>Points</th><th></th></tr>
+          <tr><th>Handle</th><th>Points</th><th>Holding</th><th></th></tr>
         </thead>
         <tbody id="lbBody"></tbody>
       </table>
@@ -226,6 +230,7 @@
   const lbGameCodeInput = document.getElementById('lbGameCode');
   const lbHandleInput = document.getElementById('lbHandle');
   const lbPointsInput = document.getElementById('lbPoints');
+  const lbHoldingPlayerInput = document.getElementById('lbHoldingPlayer');
   const lbTable = document.getElementById('lbTable');
   const lbBody = document.getElementById('lbBody');
 
@@ -254,6 +259,7 @@
         <tr>
           <td>${e.handle}</td>
           <td>${e.points}</td>
+          <td>${e.holding_player || ''}</td>
           <td class="row-actions">
             <button class="del-btn" onclick="deleteLeaderboardEntry('${lbGameCodeInput.value.trim()}', '${e.handle}')">Delete</button>
           </td>
@@ -268,6 +274,7 @@
     const gameCode = lbGameCodeInput.value.trim();
     const handle = lbHandleInput.value.trim();
     const points = lbPointsInput.value;
+    const holdingPlayer = lbHoldingPlayerInput.value.trim();
 
     if (!gameCode || !handle) {
       alert('Enter a game code and handle.');
@@ -278,7 +285,7 @@
       const res = await fetch(`/admin/leaderboard?pw=${encodeURIComponent(currentPw)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_code: gameCode, handle, points })
+        body: JSON.stringify({ game_code: gameCode, handle, points, holding_player: holdingPlayer })
       });
       if (!res.ok) {
         alert('Could not save entry.');
@@ -286,6 +293,7 @@
       }
       lbHandleInput.value = '';
       lbPointsInput.value = '0';
+      lbHoldingPlayerInput.value = '';
       loadLeaderboard(gameCode);
     } catch (err) {
       alert('Network error.');

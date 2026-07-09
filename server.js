@@ -133,7 +133,7 @@ app.get('/api/leaderboard/:code', async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
   const { data, error } = await supabase
     .from('holding_leaderboard')
-    .select('handle, points, updated_at')
+    .select('handle, points, holding_player, updated_at')
     .eq('game_code', gameCode)
     .order('points', { ascending: false })
     .order('updated_at', { ascending: true });
@@ -181,7 +181,7 @@ app.get('/admin/leaderboard/:code', checkAdminPassword, async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
   const { data, error } = await supabase
     .from('holding_leaderboard')
-    .select('handle, points, updated_at')
+    .select('handle, points, holding_player, updated_at')
     .eq('game_code', gameCode)
     .order('points', { ascending: false });
 
@@ -194,6 +194,7 @@ app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
   const gameCode = String(req.body.game_code || '').trim().toUpperCase();
   const handle = String(req.body.handle || '').trim();
   const points = parseInt(req.body.points, 10);
+  const holdingPlayer = String(req.body.holding_player || '').trim();
 
   if (!gameCode || !handle || Number.isNaN(points)) {
     return res.status(400).json({ error: 'game_code, handle, and points are required.' });
@@ -202,7 +203,13 @@ app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
   const { error } = await supabase
     .from('holding_leaderboard')
     .upsert(
-      { game_code: gameCode, handle, points, updated_at: new Date().toISOString() },
+      {
+        game_code: gameCode,
+        handle,
+        points,
+        holding_player: holdingPlayer || null,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'game_code,handle' }
     );
 

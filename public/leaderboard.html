@@ -102,6 +102,7 @@
   tbody tr:not(:last-child) td { border-bottom: 1px solid #e5e5e5; }
   td.rank { font-weight: 800; width: 40px; }
   td.points { font-weight: 800; text-align: right; }
+  td.holding { color: var(--muted); font-size: 0.85rem; }
   .empty-state {
     text-align: center;
     color: var(--muted);
@@ -157,13 +158,14 @@
         <tr>
           <td class="rank">${i + 1}</td>
           <td>${row.handle}</td>
+          <td class="holding">${row.holding_player || '—'}</td>
           <td class="points">${row.points}</td>
         </tr>
       `).join('');
 
       boardWrap.innerHTML = `
         <table>
-          <thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead>
+          <thead><tr><th>#</th><th>Handle</th><th>Holding</th><th>Points</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       `;
