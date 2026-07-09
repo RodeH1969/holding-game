@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HOLDING</title>
+<style>
+  :root {
+    --accent: #ff5757;
+    --input-fill: #d5d5d5;
+    --border: #000;
+    --text: #111;
+    --muted: #6b6b6b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 20px 16px 48px;
+  }
+  .card {
+    width: 100%;
+    max-width: 430px;
+  }
+  .logo {
+    display: block;
+    width: 65%;
+    max-width: 230px;
+    margin: 8px auto 24px;
+  }
+  form { margin-bottom: 20px; }
+  input {
+    width: 100%;
+    padding: 18px 16px;
+    margin-bottom: 16px;
+    background: var(--input-fill);
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  input::placeholder { color: #7a7a7a; }
+  input:focus { outline: none; border-color: var(--accent); }
+
+  button {
+    width: 100%;
+    padding: 18px 16px;
+    background: var(--accent);
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.15);
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+
+  .message {
+    margin-top: 14px;
+    text-align: center;
+    color: var(--accent);
+    min-height: 1.2em;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .result {
+    margin-top: 20px;
+    background: #f7f7f7;
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: none;
+  }
+  .result.show { display: block; }
+  .result h2 {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .player-row {
+    padding: 9px 4px;
+    border-bottom: 1px solid #ddd;
+    font-size: 1.02rem;
+    text-align: center;
+    font-weight: 600;
+  }
+  .player-row:last-child { border-bottom: none; }
+
+  .rules {
+    margin-top: 28px;
+    text-align: center;
+  }
+  .rules h3 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin: 0 0 14px;
+  }
+  .rules p {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #222;
+    margin: 0 0 16px;
+  }
+  .prizes {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    font-weight: 700;
+    margin: 20px 0 18px;
+  }
+  .prize-img {
+    display: block;
+    width: 100%;
+    border-radius: 6px;
+  }
+
+  .games-available {
+    margin: 0 0 24px;
+    text-align: center;
+  }
+  .games-available h3 {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px;
+  }
+  .game-item {
+    background: #f7f7f7;
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .game-item .game-name {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+  .game-item .game-code {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .game-item .game-code span {
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .game-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .game-badge.open { background: #dcf5e3; color: #157a3e; }
+  .game-badge.closed { background: #fbdcdc; color: #b31d1d; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="/holding_logo.png" alt="HOLDING">
+
+    <div class="games-available">
+      <h3>Games available to enter</h3>
+      <div class="game-item" data-game-code="FreovSwansR18">
+        <div class="game-name">Fremantle v Sydney Round 18</div>
+        <div class="game-code">Code: <span>FreovSwansR18</span></div>
+        <div class="game-badge open">Open</div>
+      </div>
+    </div>
+
+    <form id="entryForm">
+      <input type="text" id="gameCode" placeholder="Game Code" autocomplete="off" required>
+      <input type="tel" id="phone" placeholder="Mobile" autocomplete="off" required>
+      <button type="submit" id="submitBtn">Get My 4 Players</button>
+    </form>
+
+    <div class="message" id="message"></div>
+
+    <div class="result" id="result">
+      <h2>Your players</h2>
+      <div id="players"></div>
+    </div>
+
+    <div class="rules">
+      <h3>Rules</h3>
+      <p>Points are earned by a player holding the ball in each quarter at exactly the 15 minute mark as judged and communicated by the Games Master.</p>
+      <p>If no player is holding the ball at those moments then the next player to hold the ball earns the points except where 30 seconds passes after the designated time wherein no player earns points.</p>
+      <p>A tap is not holding<br>A kick is not holding<br>2 hands of the player on the ball IS holding<br>In all cases the ruling of the Games Master is FINAL</p>
+
+      <div class="prizes">
+        Prize 1: Highest Total Points after 4 quarters. 1 x 6 Pack of Guinness Cans<br>
+        Prize 2: All 4 of your players hold the ball - 1 x Carton of Guinness Cans
+      </div>
+
+      <img class="prize-img" src="/carton_of_guinness_cans.png" alt="Guinness Draught 24 pack prize">
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('entryForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const messageEl = document.getElementById('message');
+  const resultEl = document.getElementById('result');
+  const playersEl = document.getElementById('players');
+
+  // ---- Live open/closed status for each listed game ----
+  const gameItems = document.querySelectorAll('.game-item[data-game-code]');
+  const closedCodes = new Set();
+
+  async function refreshGameStatuses() {
+    for (const item of gameItems) {
+      const code = item.dataset.gameCode;
+      try {
+        const res = await fetch(`/api/game-status/${encodeURIComponent(code)}`);
+        const data = await res.json();
+        const badge = item.querySelector('.game-badge');
+        const isClosed = data.status === 'closed';
+        badge.textContent = isClosed ? 'Entries Closed' : 'Open';
+        badge.classList.toggle('open', !isClosed);
+        badge.classList.toggle('closed', isClosed);
+        if (isClosed) {
+          closedCodes.add(code.toUpperCase());
+        } else {
+          closedCodes.delete(code.toUpperCase());
+        }
+      } catch (err) {
+        // network hiccup - leave badge as-is, try again next poll
+      }
+    }
+  }
+
+  refreshGameStatuses();
+  setInterval(refreshGameStatuses, 15000);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    messageEl.textContent = '';
+    resultEl.classList.remove('show');
+
+    const game_code = document.getElementById('gameCode').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+
+    if (closedCodes.has(game_code.toUpperCase())) {
+      messageEl.textContent = 'Entries are closed for this game — it has already started.';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Getting Players...';
+
+    try {
+      const res = await fetch('/api/enter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game_code, phone })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        messageEl.textContent = data.error || 'Something went wrong.';
+        return;
+      }
+
+      playersEl.innerHTML = data.players
+        .map(p => `<div class="player-row">${p}</div>`)
+        .join('');
+      resultEl.classList.add('show');
+      form.reset();
+    } catch (err) {
+      messageEl.textContent = 'Network error. Try again.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Get My 4 Players';
+    }
+  });
+</script>
+</body>
+</html>

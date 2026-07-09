@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOLDING Admin</title>
+<style>
+  :root {
+    --bg: #111111;
+    --panel: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #e94560;
+    --text: #eaeaea;
+    --muted: #8a8a8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    padding: 40px 20px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    color: var(--accent);
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+    margin-bottom: 24px;
+  }
+  input {
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+  }
+  button {
+    padding: 12px 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  button:hover { filter: brightness(1.08); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  th { color: var(--muted); text-transform: uppercase; font-size: 0.75rem; }
+  .row-actions button { padding: 6px 12px; font-size: 0.8rem; margin-right: 6px; }
+  .row-actions .stop-btn { background: #444; }
+  #status { color: var(--muted); margin-top: 10px; }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge.open { background: #1f4d2e; color: #7de89a; }
+  .badge.closed { background: #4d1f1f; color: #ff9a9a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HOLDING · Admin</h1>
+
+  <div id="loginBox">
+    <input type="password" id="pw" placeholder="Admin password">
+    <button id="loginBtn">Load games</button>
+  </div>
+
+  <div id="status"></div>
+
+  <div id="content" style="display:none;">
+    <button id="downloadAll">Download ALL entries (.xlsx)</button>
+    <table id="gamesTable">
+      <thead>
+        <tr><th>Game code</th><th>Entries given out</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="gamesBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const pwInput = document.getElementById('pw');
+  const statusEl = document.getElementById('status');
+  const content = document.getElementById('content');
+  const gamesBody = document.getElementById('gamesBody');
+  let currentPw = '';
+
+  document.getElementById('loginBtn').addEventListener('click', loadGames);
+  document.getElementById('downloadAll').addEventListener('click', () => download('ALL'));
+
+  async function loadGames() {
+    currentPw = pwInput.value;
+    statusEl.textContent = 'Loading...';
+    try {
+      const res = await fetch(`/admin/games?pw=${encodeURIComponent(currentPw)}`);
+      if (!res.ok) {
+        statusEl.textContent = 'Wrong password.';
+        content.style.display = 'none';
+        return;
+      }
+      const games = await res.json();
+      statusEl.textContent = '';
+      content.style.display = 'block';
+      gamesBody.innerHTML = games.map(g => `
+        <tr>
+          <td>${g.game_code}</td>
+          <td>${g.current_index}</td>
+          <td><span class="badge ${g.status}">${g.status}</span></td>
+          <td class="row-actions">
+            <button onclick="download('${g.game_code}')">Download</button>
+            ${g.status === 'open'
+              ? `<button class="stop-btn" onclick="setStatus('${g.game_code}', 'closed')">Stop Entries</button>`
+              : `<button onclick="setStatus('${g.game_code}', 'open')">Reopen</button>`}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="4">No games yet.</td></tr>';
+    } catch (err) {
+      statusEl.textContent = 'Network error.';
+    }
+  }
+
+  function download(gameCode) {
+    const url = `/admin/export.xlsx?game_code=${encodeURIComponent(gameCode)}&pw=${encodeURIComponent(currentPw)}`;
+    window.location.href = url;
+  }
+
+  async function setStatus(gameCode, status) {
+    try {
+      const res = await fetch(`/admin/games/${encodeURIComponent(gameCode)}/status?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) {
+        alert('Could not update status.');
+        return;
+      }
+      loadGames();
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+</script>
+</body>
+</html>
