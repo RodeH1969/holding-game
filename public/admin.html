@@ -181,7 +181,7 @@
     </div>
 
     <div class="lb-section">
-      <h2>Quarter Leaders</h2>
+      <h2>Quarter Winners</h2>
       <div class="lb-form">
         <div>
           <label>Game code</label>
@@ -213,12 +213,12 @@
 
       <label class="no-leader-check">
         <input type="checkbox" id="qlNoLeader">
-        No leader this quarter (nobody held the ball at the mark)
+        No winner this quarter (nobody held the ball at the mark)
       </label>
 
       <table id="qlTable" style="display:none;">
         <thead>
-          <tr><th>Quarter</th><th>Leader</th><th>Holding</th><th></th></tr>
+          <tr><th>Quarter</th><th>Winner</th><th>Holding</th><th></th></tr>
         </thead>
         <tbody id="qlBody"></tbody>
       </table>
@@ -410,7 +410,7 @@
     try {
       const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(gameCode)}`);
       if (!res.ok) {
-        alert('Could not load quarter leaders.');
+        alert('Could not load quarter winners.');
         return;
       }
       const entries = await res.json();
@@ -418,7 +418,7 @@
       qlBody.innerHTML = entries.map(e => `
         <tr>
           <td>Q${e.quarter}</td>
-          <td>${e.handle || 'No leader'}</td>
+          <td>${e.handle || 'No winner'}</td>
           <td>${e.holding_player || ''}</td>
           <td class="row-actions">
             <button class="del-btn" onclick="deleteQuarterLeader('${qlGameCodeInput.value.trim()}', ${e.quarter})">Delete</button>
@@ -442,12 +442,12 @@
       return;
     }
     if (!noLeader && !handle) {
-      alert('Enter a handle, or tick "No leader this quarter".');
+      alert('Enter a handle, or tick "No winner this quarter".');
       return;
     }
 
-    const summary = noLeader ? 'No leader (nobody held the ball)' : `"${handle}"`;
-    const confirmed = confirm(`Save Quarter ${quarter} leader as ${summary} for ${gameCode}?`);
+    const summary = noLeader ? 'No winner (nobody held the ball)' : `"${handle}"`;
+    const confirmed = confirm(`Save Quarter ${quarter} winner as ${summary} for ${gameCode}?`);
     if (!confirmed) return;
 
     try {
@@ -457,7 +457,7 @@
         body: JSON.stringify({ game_code: gameCode, quarter, handle, holding_player: holdingPlayer, no_leader: noLeader })
       });
       if (!res.ok) {
-        alert('Could not save quarter leader.');
+        alert('Could not save quarter winner.');
         return;
       }
       qlHandleInput.value = '';
@@ -477,7 +477,7 @@
         method: 'DELETE'
       });
       if (!res.ok) {
-        alert('Could not delete quarter leader.');
+        alert('Could not delete quarter winner.');
         return;
       }
       loadQuarterLeaders(gameCode);
