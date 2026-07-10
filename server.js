@@ -15,23 +15,31 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ---------- Load combinations once at startup ----------
-const COMBOS_PATH = path.join(__dirname, 'combinations.txt');
-const rawLines = fs.readFileSync(COMBOS_PATH, 'utf8').split('\n').filter(Boolean);
+// ---------- Load one combinations pool per game from combos/ ----------
+// Each file in combos/ is named GAMECODE.txt and holds that game's own
+// numbered combinations, e.g. combos/PIESVROOSR18.txt. This lets multiple
+// games run at once, each drawing from its own player pool.
+const COMBOS_DIR = path.join(__dirname, 'combos');
+const gamesCombos = {}; // gameCode -> { combos: {1: [...], ...}, max: N, players: [...] }
 
-// combos[1] => array of 4 player strings, matches the "N." numbering in the file
-const combos = { 0: null };
-for (const line of rawLines) {
-  const dotIdx = line.indexOf('.');
-  const n = parseInt(line.slice(0, dotIdx), 10);
-  const players = line
-    .slice(dotIdx + 1)
-    .split('|')
-    .map((p) => p.trim());
-  combos[n] = players;
+for (const filename of fs.readdirSync(COMBOS_DIR)) {
+  if (!filename.endsWith('.txt')) continue;
+  const gameCode = filename.replace(/\.txt$/, '').toUpperCase();
+  const rawLines = fs.readFileSync(path.join(COMBOS_DIR, filename), 'utf8').split('\n').filter(Boolean);
+
+  const combos = { 0: null };
+  for (const line of rawLines) {
+    const dotIdx = line.indexOf('.');
+    const n = parseInt(line.slice(0, dotIdx), 10);
+    const players = line.slice(dotIdx + 1).split('|').map((p) => p.trim());
+    combos[n] = players;
+  }
+
+  const players = [...new Set(Object.values(combos).filter(Boolean).flat())].sort();
+
+  gamesCombos[gameCode] = { combos, max: rawLines.length, players };
+  console.log(`Loaded ${rawLines.length} combinations for ${gameCode}`);
 }
-const MAX_COMBO_INDEX = rawLines.length;
-console.log(`Loaded ${MAX_COMBO_INDEX} combinations`);
 
 // ---------- Phone normalisation ----------
 // Accepts 04XXXXXXXX or 614XXXXXXXX (with or without +/spaces/dashes)
@@ -63,6 +71,11 @@ app.post('/api/enter', async (req, res) => {
       return res.status(400).json({ error: 'Enter a handle (name shown on the leaderboard).' });
     }
 
+    const gameData = gamesCombos[gameCode];
+    if (!gameData) {
+      return res.status(404).json({ error: 'Unknown game code.' });
+    }
+
     // Already entered this game with this phone? Return the same combo again.
     const { data: existing, error: existingErr } = await supabase
       .from('holding_entries')
@@ -88,11 +101,11 @@ app.post('/api/enter', async (req, res) => {
       throw rpcErr;
     }
 
-    if (nextIndex > MAX_COMBO_INDEX) {
+    if (nextIndex > gameData.max) {
       return res.status(409).json({ error: 'All combinations for this game have been given out.' });
     }
 
-    const players = combos[nextIndex];
+    const players = gameData.combos[nextIndex];
     if (!players) {
       return res.status(500).json({ error: 'Combination lookup failed.' });
     }
@@ -128,18 +141,27 @@ app.get('/api/game-status/:code', async (req, res) => {
   res.json({ game_code: gameCode, status: data ? data.status : 'open' });
 });
 
-// ---------- Public: leaderboard for a game ----------
+// ---------- Public: leaderboard for a game (auto-computed from Quarter Winners) ----------
 app.get('/api/leaderboard/:code', async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
   const { data, error } = await supabase
-    .from('holding_leaderboard')
-    .select('handle, points, holding_player, updated_at')
+    .from('holding_quarter_leaders')
+    .select('handle')
     .eq('game_code', gameCode)
-    .order('points', { ascending: false })
-    .order('updated_at', { ascending: true });
+    .not('handle', 'is', null);
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+
+  const counts = {};
+  for (const row of data) {
+    counts[row.handle] = (counts[row.handle] || 0) + 1;
+  }
+
+  const leaderboard = Object.entries(counts)
+    .map(([handle, points]) => ({ handle, points }))
+    .sort((a, b) => b.points - a.points || a.handle.localeCompare(b.handle));
+
+  res.json(leaderboard);
 });
 
 // ---------- Public: quarter-by-quarter leaders ----------
@@ -188,73 +210,25 @@ app.post('/admin/games/:code/status', checkAdminPassword, async (req, res) => {
   res.json({ game_code: gameCode, status });
 });
 
-// Admin: view leaderboard for a game (same data as public endpoint, kept
-// separate so the admin page doesn't depend on the public route's shape)
-app.get('/admin/leaderboard/:code', checkAdminPassword, async (req, res) => {
+// Admin: full list of players for a specific game (for the "Player Holding Ball" dropdown)
+app.get('/admin/players/:code', checkAdminPassword, (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const gameData = gamesCombos[gameCode];
+  if (!gameData) return res.status(404).json({ error: 'Unknown game code.' });
+  res.json(gameData.players);
+});
+
+// Admin: distinct handles registered for a game (for the "Handle" dropdown)
+app.get('/admin/handles/:code', checkAdminPassword, async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
   const { data, error } = await supabase
-    .from('holding_leaderboard')
-    .select('handle, points, holding_player, updated_at')
-    .eq('game_code', gameCode)
-    .order('points', { ascending: false });
+    .from('holding_entries')
+    .select('handle')
+    .eq('game_code', gameCode);
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
-
-// Admin: add or update a handle's points for a game
-app.post('/admin/leaderboard', checkAdminPassword, async (req, res) => {
-  const gameCode = String(req.body.game_code || '').trim().toUpperCase();
-  const handle = String(req.body.handle || '').trim();
-  const pointsToAdd = parseInt(req.body.points, 10);
-  const holdingPlayer = String(req.body.holding_player || '').trim();
-
-  if (!gameCode || !handle || Number.isNaN(pointsToAdd)) {
-    return res.status(400).json({ error: 'game_code, handle, and points are required.' });
-  }
-
-  // Look up whatever's already there so we ADD to it, not overwrite it.
-  const { data: existing, error: fetchErr } = await supabase
-    .from('holding_leaderboard')
-    .select('points')
-    .eq('game_code', gameCode)
-    .eq('handle', handle)
-    .maybeSingle();
-
-  if (fetchErr) return res.status(500).json({ error: fetchErr.message });
-
-  const newTotal = (existing ? existing.points : 0) + pointsToAdd;
-
-  const { error } = await supabase
-    .from('holding_leaderboard')
-    .upsert(
-      {
-        game_code: gameCode,
-        handle,
-        points: newTotal,
-        holding_player: holdingPlayer || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'game_code,handle' }
-    );
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true, new_total: newTotal });
-});
-
-// Admin: remove a leaderboard entry
-app.delete('/admin/leaderboard/:code/:handle', checkAdminPassword, async (req, res) => {
-  const gameCode = String(req.params.code || '').trim().toUpperCase();
-  const handle = String(req.params.handle || '').trim();
-
-  const { error } = await supabase
-    .from('holding_leaderboard')
-    .delete()
-    .eq('game_code', gameCode)
-    .eq('handle', handle);
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
+  const handles = [...new Set(data.map((r) => r.handle).filter(Boolean))].sort();
+  res.json(handles);
 });
 
 // Admin: set/update the leader for a given quarter

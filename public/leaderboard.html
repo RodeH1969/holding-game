@@ -356,7 +356,7 @@
         return;
       }
       if (!data.length) {
-        boardWrap.innerHTML = '<div class="empty-state">No results posted yet — check back after the first quarter.</div>';
+        boardWrap.innerHTML = '<div class="empty-state">No one has won any points so far.</div>';
         return;
       }
 
@@ -364,14 +364,13 @@
         <tr>
           <td class="rank">${i + 1}</td>
           <td>${row.handle}</td>
-          <td class="holding">${row.holding_player || '—'}</td>
           <td class="points">${row.points}</td>
         </tr>
       `).join('');
 
       boardWrap.innerHTML = `
         <table>
-          <thead><tr><th>#</th><th>Handle</th><th>Holding</th><th>Points</th></tr></thead>
+          <thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       `;

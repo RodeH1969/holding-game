@@ -147,45 +147,13 @@
     </table>
 
     <div class="lb-section">
-      <h2>Leaderboard</h2>
-      <div class="lb-form">
-        <div>
-          <label>Game code</label>
-          <input type="text" id="lbGameCode" placeholder="e.g. FREOVSWANSR18">
-        </div>
-        <button id="lbLoadBtn">Load</button>
-      </div>
-
-      <div class="lb-form">
-        <div>
-          <label>Handle</label>
-          <input type="text" id="lbHandle" placeholder="Handle">
-        </div>
-        <div>
-          <label>Points to Add</label>
-          <input type="number" id="lbPoints" placeholder="0" value="0">
-        </div>
-        <div>
-          <label>Player Holding Ball</label>
-          <input type="text" id="lbHoldingPlayer" placeholder="e.g. 4 B. Grundy">
-        </div>
-        <button id="lbSaveBtn">Save</button>
-      </div>
-
-      <table id="lbTable" style="display:none;">
-        <thead>
-          <tr><th>Handle</th><th>Points</th><th>Holding</th><th></th></tr>
-        </thead>
-        <tbody id="lbBody"></tbody>
-      </table>
-    </div>
-
-    <div class="lb-section">
       <h2>Quarter Winners</h2>
       <div class="lb-form">
         <div>
           <label>Game code</label>
-          <input type="text" id="qlGameCode" placeholder="e.g. FREOVSWANSR18">
+          <select id="qlGameCode">
+            <option value="">-- select a game --</option>
+          </select>
         </div>
         <button id="qlLoadBtn">Load</button>
       </div>
@@ -201,20 +169,19 @@
           </select>
         </div>
         <div>
-          <label>Handle</label>
-          <input type="text" id="qlHandle" placeholder="Handle">
+          <label>Player Holding Ball</label>
+          <select id="qlHoldingPlayer">
+            <option value="">No one had a player holding the ball</option>
+          </select>
         </div>
         <div>
-          <label>Player Holding Ball</label>
-          <input type="text" id="qlHoldingPlayer" placeholder="e.g. 4 B. Grundy">
+          <label>Handle Who Won</label>
+          <select id="qlHandle">
+            <option value="">-- select handle --</option>
+          </select>
         </div>
         <button id="qlSaveBtn">Save</button>
       </div>
-
-      <label class="no-leader-check">
-        <input type="checkbox" id="qlNoLeader">
-        No winner this quarter (nobody held the ball at the mark)
-      </label>
 
       <table id="qlTable" style="display:none;">
         <thead>
@@ -222,6 +189,16 @@
         </thead>
         <tbody id="qlBody"></tbody>
       </table>
+
+      <h2 style="margin-top:32px;">Leaderboard (auto-calculated)</h2>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Updates automatically from Quarter Winners above — 1 point per quarter won. Nothing to enter here.</p>
+      <table id="autoLbTable" style="display:none;">
+        <thead>
+          <tr><th>#</th><th>Handle</th><th>Points</th></tr>
+        </thead>
+        <tbody id="autoLbBody"></tbody>
+      </table>
+      <div id="autoLbEmpty" style="display:none; color:var(--muted); font-size:0.85rem;">No one has won any points so far.</div>
     </div>
   </div>
 </div>
@@ -259,10 +236,13 @@
             ${g.status === 'open'
               ? `<button class="stop-btn" onclick="setStatus('${g.game_code}', 'closed')">Stop Entries</button>`
               : `<button onclick="setStatus('${g.game_code}', 'open')">Reopen</button>`}
-            <button onclick="selectForLeaderboard('${g.game_code}')">Leaderboard</button>
+            <button onclick="selectForQuarterWinners('${g.game_code}')">Quarter Winners</button>
           </td>
         </tr>
       `).join('') || '<tr><td colspan="4">No games yet.</td></tr>';
+
+      qlGameCodeInput.innerHTML = '<option value="">-- select a game --</option>' +
+        games.map(g => `<option value="${g.game_code}">${g.game_code} (${g.status})</option>`).join('');
     } catch (err) {
       statusEl.textContent = 'Network error.';
     }
@@ -290,123 +270,77 @@
     }
   }
 
-  // ---------------- Leaderboard ----------------
-  const lbGameCodeInput = document.getElementById('lbGameCode');
-  const lbHandleInput = document.getElementById('lbHandle');
-  const lbPointsInput = document.getElementById('lbPoints');
-  const lbHoldingPlayerInput = document.getElementById('lbHoldingPlayer');
-  const lbTable = document.getElementById('lbTable');
-  const lbBody = document.getElementById('lbBody');
-
-  document.getElementById('lbLoadBtn').addEventListener('click', () => {
-    const code = lbGameCodeInput.value.trim();
-    if (code) loadLeaderboard(code);
-  });
-  document.getElementById('lbSaveBtn').addEventListener('click', saveLeaderboardEntry);
-
-  function selectForLeaderboard(gameCode) {
-    lbGameCodeInput.value = gameCode;
-    loadLeaderboard(gameCode);
-    qlGameCodeInput.value = gameCode;
-    loadQuarterLeaders(gameCode);
-    document.querySelector('.lb-section').scrollIntoView({ behavior: 'smooth' });
-  }
-
-  async function loadLeaderboard(gameCode) {
-    try {
-      const res = await fetch(`/admin/leaderboard/${encodeURIComponent(gameCode)}?pw=${encodeURIComponent(currentPw)}`);
-      if (!res.ok) {
-        alert('Could not load leaderboard.');
-        return;
-      }
-      const entries = await res.json();
-      lbTable.style.display = entries.length ? 'table' : 'none';
-      lbBody.innerHTML = entries.map(e => `
-        <tr>
-          <td>${e.handle}</td>
-          <td>${e.points}</td>
-          <td>${e.holding_player || ''}</td>
-          <td class="row-actions">
-            <button class="del-btn" onclick="deleteLeaderboardEntry('${lbGameCodeInput.value.trim()}', '${e.handle}')">Delete</button>
-          </td>
-        </tr>
-      `).join('');
-    } catch (err) {
-      alert('Network error.');
-    }
-  }
-
-  async function saveLeaderboardEntry() {
-    const gameCode = lbGameCodeInput.value.trim();
-    const handle = lbHandleInput.value.trim();
-    const points = lbPointsInput.value;
-    const holdingPlayer = lbHoldingPlayerInput.value.trim();
-
-    if (!gameCode || !handle) {
-      alert('Enter a game code and handle.');
-      return;
-    }
-
-    try {
-      const res = await fetch(`/admin/leaderboard?pw=${encodeURIComponent(currentPw)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_code: gameCode, handle, points, holding_player: holdingPlayer })
-      });
-      if (!res.ok) {
-        alert('Could not save entry.');
-        return;
-      }
-      lbHandleInput.value = '';
-      lbPointsInput.value = '0';
-      lbHoldingPlayerInput.value = '';
-      loadLeaderboard(gameCode);
-    } catch (err) {
-      alert('Network error.');
-    }
-  }
-
-  async function deleteLeaderboardEntry(gameCode, handle) {
-    try {
-      const res = await fetch(`/admin/leaderboard/${encodeURIComponent(gameCode)}/${encodeURIComponent(handle)}?pw=${encodeURIComponent(currentPw)}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        alert('Could not delete entry.');
-        return;
-      }
-      loadLeaderboard(gameCode);
-    } catch (err) {
-      alert('Network error.');
-    }
-  }
-
-  // ---------------- Quarter Leaders ----------------
+  // ---------------- Quarter Winners ----------------
   const qlGameCodeInput = document.getElementById('qlGameCode');
   const qlQuarterInput = document.getElementById('qlQuarter');
   const qlHandleInput = document.getElementById('qlHandle');
   const qlHoldingPlayerInput = document.getElementById('qlHoldingPlayer');
-  const qlNoLeaderInput = document.getElementById('qlNoLeader');
   const qlTable = document.getElementById('qlTable');
   const qlBody = document.getElementById('qlBody');
+  const autoLbTable = document.getElementById('autoLbTable');
+  const autoLbBody = document.getElementById('autoLbBody');
+  const autoLbEmpty = document.getElementById('autoLbEmpty');
+
+  // Populate the "Player Holding Ball" dropdown for whichever game is selected.
+  async function loadPlayersDropdown(gameCode) {
+    try {
+      const res = await fetch(`/admin/players/${encodeURIComponent(gameCode)}?pw=${encodeURIComponent(currentPw)}`);
+      if (!res.ok) return;
+      const players = await res.json();
+      qlHoldingPlayerInput.innerHTML = '<option value="">No one had a player holding the ball</option>' +
+        players.map(p => `<option value="${p}">${p}</option>`).join('');
+    } catch (err) {
+      // silent - dropdown just stays with the default option
+    }
+  }
+
+  async function loadHandlesDropdown(gameCode) {
+    try {
+      const res = await fetch(`/admin/handles/${encodeURIComponent(gameCode)}?pw=${encodeURIComponent(currentPw)}`);
+      if (!res.ok) return;
+      const handles = await res.json();
+      qlHandleInput.innerHTML = '<option value="">-- select handle --</option>' +
+        handles.map(h => `<option value="${h}">${h}</option>`).join('');
+    } catch (err) {
+      // silent
+    }
+  }
 
   document.getElementById('qlLoadBtn').addEventListener('click', () => {
-    const code = qlGameCodeInput.value.trim();
-    if (code) loadQuarterLeaders(code);
-  });
-  document.getElementById('qlSaveBtn').addEventListener('click', saveQuarterLeader);
-
-  qlNoLeaderInput.addEventListener('change', () => {
-    const disabled = qlNoLeaderInput.checked;
-    qlHandleInput.disabled = disabled;
-    qlHoldingPlayerInput.disabled = disabled;
-    if (disabled) {
-      qlHandleInput.value = '';
-      qlHoldingPlayerInput.value = '';
+    const code = qlGameCodeInput.value;
+    if (code) {
+      loadQuarterWinners(code);
+      loadHandlesDropdown(code);
+      loadPlayersDropdown(code);
     }
   });
+  qlGameCodeInput.addEventListener('change', () => {
+    const code = qlGameCodeInput.value;
+    if (code) {
+      loadQuarterWinners(code);
+      loadHandlesDropdown(code);
+      loadPlayersDropdown(code);
+    }
+  });
+  document.getElementById('qlSaveBtn').addEventListener('click', saveQuarterWinner);
 
-  async function loadQuarterLeaders(gameCode) {
+  // Picking "No one had a player holding the ball" auto-clears/locks the handle dropdown,
+  // since nobody can have won that quarter if nobody was holding the ball.
+  qlHoldingPlayerInput.addEventListener('change', () => {
+    const noOne = qlHoldingPlayerInput.value === '';
+    qlHandleInput.disabled = noOne;
+    if (noOne) qlHandleInput.value = '';
+  });
+
+  function selectForQuarterWinners(gameCode) {
+    qlGameCodeInput.value = gameCode;
+    loadQuarterWinners(gameCode);
+    loadHandlesDropdown(gameCode);
+    loadPlayersDropdown(gameCode);
+    document.querySelector('.lb-section').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function loadQuarterWinners(gameCode) {
     try {
       const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(gameCode)}`);
       if (!res.ok) {
@@ -421,33 +355,55 @@
           <td>${e.handle || 'No winner'}</td>
           <td>${e.holding_player || ''}</td>
           <td class="row-actions">
-            <button class="del-btn" onclick="deleteQuarterLeader('${qlGameCodeInput.value.trim()}', ${e.quarter})">Delete</button>
+            <button class="del-btn" onclick="deleteQuarterWinner('${gameCode}', ${e.quarter})">Delete</button>
           </td>
         </tr>
       `).join('');
+
+      loadAutoLeaderboard(gameCode);
     } catch (err) {
       alert('Network error.');
     }
   }
 
-  async function saveQuarterLeader() {
-    const gameCode = qlGameCodeInput.value.trim();
+  async function loadAutoLeaderboard(gameCode) {
+    try {
+      const res = await fetch(`/api/leaderboard/${encodeURIComponent(gameCode)}`);
+      if (!res.ok) return;
+      const entries = await res.json();
+      if (!entries.length) {
+        autoLbTable.style.display = 'none';
+        autoLbEmpty.style.display = 'block';
+        return;
+      }
+      autoLbEmpty.style.display = 'none';
+      autoLbTable.style.display = 'table';
+      autoLbBody.innerHTML = entries.map((e, i) => `
+        <tr><td>${i + 1}</td><td>${e.handle}</td><td>${e.points}</td></tr>
+      `).join('');
+    } catch (err) {
+      // silent
+    }
+  }
+
+  async function saveQuarterWinner() {
+    const gameCode = qlGameCodeInput.value;
     const quarter = qlQuarterInput.value;
-    const noLeader = qlNoLeaderInput.checked;
-    const handle = qlHandleInput.value.trim();
-    const holdingPlayer = qlHoldingPlayerInput.value.trim();
+    const holdingPlayer = qlHoldingPlayerInput.value;
+    const noLeader = holdingPlayer === '';
+    const handle = qlHandleInput.value;
 
     if (!gameCode) {
-      alert('Enter a game code.');
+      alert('Select a game code.');
       return;
     }
     if (!noLeader && !handle) {
-      alert('Enter a handle, or tick "No winner this quarter".');
+      alert('Select the handle who won, or choose "No one had a player holding the ball".');
       return;
     }
 
-    const summary = noLeader ? 'No winner (nobody held the ball)' : `"${handle}"`;
-    const confirmed = confirm(`Save Quarter ${quarter} winner as ${summary} for ${gameCode}?`);
+    const summary = noLeader ? 'No one had a player holding the ball' : `"${handle}" (holding: ${holdingPlayer})`;
+    const confirmed = confirm(`Save Quarter ${quarter} for ${gameCode} as: ${summary}?`);
     if (!confirmed) return;
 
     try {
@@ -462,16 +418,14 @@
       }
       qlHandleInput.value = '';
       qlHoldingPlayerInput.value = '';
-      qlNoLeaderInput.checked = false;
       qlHandleInput.disabled = false;
-      qlHoldingPlayerInput.disabled = false;
-      loadQuarterLeaders(gameCode);
+      loadQuarterWinners(gameCode);
     } catch (err) {
       alert('Network error.');
     }
   }
 
-  async function deleteQuarterLeader(gameCode, quarter) {
+  async function deleteQuarterWinner(gameCode, quarter) {
     try {
       const res = await fetch(`/admin/quarter-leaders/${encodeURIComponent(gameCode)}/${quarter}?pw=${encodeURIComponent(currentPw)}`, {
         method: 'DELETE'
@@ -480,7 +434,7 @@
         alert('Could not delete quarter winner.');
         return;
       }
-      loadQuarterLeaders(gameCode);
+      loadQuarterWinners(gameCode);
     } catch (err) {
       alert('Network error.');
     }

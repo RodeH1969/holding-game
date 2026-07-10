@@ -1,0 +1,13 @@
+-- No schema change needed for this update.
+--
+-- The Leaderboard is now calculated automatically from holding_quarter_leaders
+-- (1 point per quarter a handle is recorded as the winner) instead of being
+-- entered manually into holding_leaderboard.
+--
+-- The old holding_leaderboard table is no longer read from or written to by
+-- the app. It's safe to leave it in place (nothing references it, no harm
+-- keeping the data) or, if you'd like to tidy up, you can drop it manually:
+--
+--   drop table if exists holding_leaderboard;
+--
+-- This is optional and not required for the app to work.

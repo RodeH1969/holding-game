@@ -346,6 +346,15 @@
         </div>
         <div class="game-badge open">Open</div>
       </div>
+      <div class="game-item" data-game-code="SAINTSVPOWERR18">
+        <div class="game-name">St Kilda v Port Adelaide</div>
+        <div class="game-datetime">Round 18 · Saturday 11 July 2026 · 1:15 PM (AEST)</div>
+        <div class="game-code-row">
+          <span class="game-code-label">Code: <strong>SAINTSVPOWERR18</strong></span>
+          <button type="button" class="copy-btn" data-copy-code="SAINTSVPOWERR18">Copy</button>
+        </div>
+        <div class="game-badge open">Open</div>
+      </div>
     </div>
 
     <a class="leaderboard-link" href="/leaderboard.html">View Leaderboard →</a>
@@ -388,7 +397,7 @@
     <div class="modal-box">
       <button class="modal-close" type="button" data-close="rulesModal">✕</button>
       <h3>Rules</h3>
-      <p>Points are earned by a player holding the ball in each quarter at exactly the 15 minute mark as judged and communicated by the Games Master.</p>
+      <p>Points are earned by a player holding the ball in each quarter at exactly 10 minutes on the clock, as judged and communicated by the Games Master.</p>
       <p>If no player is holding the ball at those moments then the next player to hold the ball earns the points except where 30 seconds passes after the designated time wherein no player earns points.</p>
       <p>A tap is not holding<br>A kick is not holding<br>2 hands of the player on the ball IS holding<br>In all cases the ruling of the Games Master is FINAL</p>
     </div>
@@ -399,7 +408,7 @@
       <button class="modal-close" type="button" data-close="claimModal">✕</button>
       <h3>How to Claim Prizes</h3>
       <p>The Games Master will post the official results after each quarter in the Leaderboard tab.</p>
-      <p>To claim Prize 1: The player who is leading at the 15:00 mark of the 4th quarter must text the Games Master before the final siren. The text message must say:<br><strong>"LEADER"</strong></p>
+      <p>To claim Prize 1: The player who is leading at 10 minutes on the clock of the 4th quarter must text the Games Master before the final siren. The text message must say:<br><strong>"LEADER"</strong></p>
       <p>To claim Prize 2: Text the Games Master before the final siren of the 4th quarter. The text message must say:<br><strong>"WINNER"</strong></p>
     </div>
   </div>
@@ -409,6 +418,15 @@
       <button class="modal-close" type="button" data-close="validationModal">✕</button>
       <h3>Missing Info</h3>
       <p>You must fill in all fields to claim a prize.</p>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="screenshotModal">
+    <div class="modal-box">
+      <button class="modal-close" type="button" data-close="screenshotModal">✕</button>
+      <h3>Take a Screenshot Now!</h3>
+      <p>Screenshot your 4 players now so they're handy during the game — saves you digging your phone out and re-entering your details later.</p>
+      <p>The critical moment every quarter is <strong>10 minutes on the clock</strong> — that's when the Games Master judges who's holding the ball.</p>
     </div>
   </div>
 
@@ -424,7 +442,7 @@
   const closedCodes = new Set();
 
   const leaderboardLink = document.querySelector('.leaderboard-link');
-  if (leaderboardLink && gameItems.length) {
+  if (leaderboardLink && gameItems.length === 1) {
     leaderboardLink.href = `/leaderboard.html?code=${encodeURIComponent(gameItems[0].dataset.gameCode)}`;
   }
 
@@ -533,6 +551,7 @@
         .join('');
       resultEl.classList.add('show');
       form.reset();
+      openModal('screenshotModal');
     } catch (err) {
       messageEl.textContent = 'Network error. Try again.';
     } finally {
