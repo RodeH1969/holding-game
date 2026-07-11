@@ -92,6 +92,74 @@
   tbody tr:not(:last-child) td { border-bottom: 1px solid #e5e5e5; }
   td.rank { font-weight: 800; width: 40px; }
   td.points { font-weight: 800; text-align: right; }
+
+  .winner-badge {
+    display: inline-block;
+    background: #ffd700;
+    color: #7a5c00;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 6px;
+    animation: winner-flash 1s ease-in-out infinite;
+  }
+  @keyframes winner-flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .winner-badge { animation: none; }
+  }
+
+  .claim-status {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 2px solid #000;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .claim-status.claimed { background: #dcf5e3; color: #157a3e; }
+  .claim-status.not-claimed { background: #fbdcdc; color: #b31d1d; }
+
+  .prize-thumb {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-left: 6px;
+    border-radius: 4px;
+  }
+
+  .prize2-box {
+    margin-top: 16px;
+    border: 3px solid #000;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .prize2-box img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .prize2-box .prize2-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .prize2-box.empty {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 0.85rem;
+    justify-content: center;
+    text-align: center;
+  }
   td.holding { color: var(--muted); font-size: 0.85rem; }
   .empty-state {
     text-align: center;
@@ -262,6 +330,10 @@
 
     <div class="section-title">Total Points</div>
     <div id="boardWrap"></div>
+    <div id="claimStatusWrap"></div>
+
+    <div class="section-title">Prize 2</div>
+    <div id="prize2Wrap"></div>
   </div>
 
   <div class="modal-overlay" id="claimModal">
@@ -277,6 +349,8 @@
   const gameCodeSelect = document.getElementById('gameCodeSelect');
   const gameLabel = document.getElementById('gameLabel');
   const boardWrap = document.getElementById('boardWrap');
+  const claimStatusWrap = document.getElementById('claimStatusWrap');
+  const prize2Wrap = document.getElementById('prize2Wrap');
   const quarterWrap = document.getElementById('quarterWrap');
 
   let currentCode = '';
@@ -351,6 +425,7 @@
     boardWrap.innerHTML = '<div class="empty-state">Loading...</div>';
 
     loadQuarterLeaders(currentCode);
+    loadPrize2Winner(currentCode);
 
     try {
       const res = await fetch(`/api/leaderboard/${encodeURIComponent(currentCode)}`);
@@ -361,14 +436,14 @@
         return;
       }
       if (!data.length) {
-        boardWrap.innerHTML = '<div class="empty-state">No one has won any points so far.</div>';
+        boardWrap.innerHTML = '<div class="empty-state">No Winner as noone received any points.</div>';
         return;
       }
 
       const rows = data.map((row, i) => `
         <tr>
           <td class="rank">${i + 1}</td>
-          <td>${row.handle}</td>
+          <td>${row.handle}${i === 0 ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
           <td class="points">${row.points}</td>
         </tr>
       `).join('');
@@ -379,8 +454,46 @@
           <tbody>${rows}</tbody>
         </table>
       `;
+
+      loadClaimStatus(currentCode, data[0].handle);
     } catch (err) {
       boardWrap.innerHTML = '<div class="empty-state">Network error. Try again.</div>';
+    }
+  }
+
+  async function loadClaimStatus(code, leaderHandle) {
+    claimStatusWrap.innerHTML = '';
+    try {
+      const res = await fetch(`/api/prize-claims/${encodeURIComponent(code)}`);
+      if (!res.ok) return;
+      const claims = await res.json();
+      const record = claims.find(c => c.handle === leaderHandle);
+      const claimed = record ? record.claimed : false;
+
+      claimStatusWrap.innerHTML = claimed
+        ? `<div class="claim-status claimed">✅ ${leaderHandle} has claimed their prize.</div>`
+        : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
+    } catch (err) {
+      // silent
+    }
+  }
+
+  async function loadPrize2Winner(code) {
+    try {
+      const res = await fetch(`/api/prize2-winner/${encodeURIComponent(code)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      prize2Wrap.innerHTML = data.winner
+        ? `
+          <div class="prize2-box">
+            <img src="/carton_of_guinness_cans.png" alt="Carton of Guinness cans">
+            <div class="prize2-text">🎉 Prize 2 winner: <strong>${data.winner}</strong> — all 4 of their players held the ball!</div>
+          </div>
+        `
+        : `<div class="prize2-box empty">No Prize 2 winner yet — nobody's had all 4 players hold the ball.</div>`;
+    } catch (err) {
+      // silent
     }
   }
 

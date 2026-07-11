@@ -199,6 +199,31 @@
         <tbody id="autoLbBody"></tbody>
       </table>
       <div id="autoLbEmpty" style="display:none; color:var(--muted); font-size:0.85rem;">No one has won any points so far.</div>
+
+      <h2 style="margin-top:32px;">Prize Claims</h2>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Record whether the leader texted in to claim their prize. Uses the same game code selected above.</p>
+      <div class="lb-form">
+        <div>
+          <label>Handle</label>
+          <select id="pcHandle">
+            <option value="">-- select handle --</option>
+          </select>
+        </div>
+        <div>
+          <label>Claimed?</label>
+          <select id="pcClaimed">
+            <option value="true">Yes — claimed</option>
+            <option value="false">No — did not claim</option>
+          </select>
+        </div>
+        <button id="pcSaveBtn">Save</button>
+      </div>
+      <table id="pcTable" style="display:none;">
+        <thead>
+          <tr><th>Handle</th><th>Status</th></tr>
+        </thead>
+        <tbody id="pcBody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -280,6 +305,10 @@
   const autoLbTable = document.getElementById('autoLbTable');
   const autoLbBody = document.getElementById('autoLbBody');
   const autoLbEmpty = document.getElementById('autoLbEmpty');
+  const pcHandleInput = document.getElementById('pcHandle');
+  const pcClaimedInput = document.getElementById('pcClaimed');
+  const pcTable = document.getElementById('pcTable');
+  const pcBody = document.getElementById('pcBody');
 
   // Populate the "Player Holding Ball" dropdown for whichever game is selected.
   async function loadPlayersDropdown(gameCode) {
@@ -302,6 +331,8 @@
       qlHandleInput.innerHTML = '<option value="">-- select handle --</option>' +
         '<option value="__NONE__">No one won (nobody\'s combo included the holding player)</option>' +
         handles.map(h => `<option value="${h}">${h}</option>`).join('');
+      pcHandleInput.innerHTML = '<option value="">-- select handle --</option>' +
+        handles.map(h => `<option value="${h}">${h}</option>`).join('');
     } catch (err) {
       // silent
     }
@@ -313,6 +344,7 @@
       loadQuarterWinners(code);
       loadHandlesDropdown(code);
       loadPlayersDropdown(code);
+      loadPrizeClaims(code);
     }
   });
   qlGameCodeInput.addEventListener('change', () => {
@@ -321,6 +353,7 @@
       loadQuarterWinners(code);
       loadHandlesDropdown(code);
       loadPlayersDropdown(code);
+      loadPrizeClaims(code);
     }
   });
   document.getElementById('qlSaveBtn').addEventListener('click', saveQuarterWinner);
@@ -338,6 +371,7 @@
     loadQuarterWinners(gameCode);
     loadHandlesDropdown(gameCode);
     loadPlayersDropdown(gameCode);
+    loadPrizeClaims(gameCode);
     document.querySelector('.lb-section').scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -446,6 +480,56 @@
         return;
       }
       loadQuarterWinners(gameCode);
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
+
+  // ---------------- Prize Claims ----------------
+  document.getElementById('pcSaveBtn').addEventListener('click', savePrizeClaim);
+
+  async function loadPrizeClaims(gameCode) {
+    try {
+      const res = await fetch(`/api/prize-claims/${encodeURIComponent(gameCode)}`);
+      if (!res.ok) return;
+      const claims = await res.json();
+      pcTable.style.display = claims.length ? 'table' : 'none';
+      pcBody.innerHTML = claims.map(c => `
+        <tr>
+          <td>${c.handle}</td>
+          <td>${c.claimed ? '✅ Claimed' : '❌ Did not claim'}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      // silent
+    }
+  }
+
+  async function savePrizeClaim() {
+    const gameCode = qlGameCodeInput.value;
+    const handle = pcHandleInput.value;
+    const claimed = pcClaimedInput.value === 'true';
+
+    if (!gameCode) {
+      alert('Select a game code above first.');
+      return;
+    }
+    if (!handle) {
+      alert('Select a handle.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/prize-claims?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game_code: gameCode, handle, claimed })
+      });
+      if (!res.ok) {
+        alert('Could not save.');
+        return;
+      }
+      loadPrizeClaims(gameCode);
     } catch (err) {
       alert('Network error.');
     }
