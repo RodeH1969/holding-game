@@ -183,6 +183,55 @@ app.get('/api/leaderboard/:code', async (req, res) => {
   res.json(leaderboard);
 });
 
+// ---------- Public: prize claim status for a game ----------
+app.get('/api/prize-claims/:code', async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const { data, error } = await supabase
+    .from('holding_prize_claims')
+    .select('handle, claimed')
+    .eq('game_code', gameCode);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ---------- Public: Prize 2 winner - all 4 of a handle's players were each
+// the holding player in some quarter of this game ----------
+app.get('/api/prize2-winner/:code', async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+
+  const { data: quarters, error: qErr } = await supabase
+    .from('holding_quarter_leaders')
+    .select('holding_player')
+    .eq('game_code', gameCode)
+    .not('holding_player', 'is', null);
+
+  if (qErr) return res.status(500).json({ error: qErr.message });
+
+  const holdingSet = new Set(quarters.map((q) => q.holding_player));
+  // Need exactly 4 distinct players recorded as holding across the quarters
+  // for it to even be possible that one entrant's whole combo was covered.
+  if (holdingSet.size !== 4) {
+    return res.json({ winner: null });
+  }
+
+  const { data: entries, error: eErr } = await supabase
+    .from('holding_entries')
+    .select('handle, combo_text')
+    .eq('game_code', gameCode);
+
+  if (eErr) return res.status(500).json({ error: eErr.message });
+
+  for (const entry of entries) {
+    const comboPlayers = entry.combo_text.split('|').map((p) => p.trim());
+    if (comboPlayers.length === 4 && comboPlayers.every((p) => holdingSet.has(p))) {
+      return res.json({ winner: entry.handle });
+    }
+  }
+
+  res.json({ winner: null });
+});
+
 // ---------- Public: quarter-by-quarter leaders ----------
 app.get('/api/quarter-leaders/:code', async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
@@ -291,6 +340,27 @@ app.delete('/admin/quarter-leaders/:code/:quarter', checkAdminPassword, async (r
     .delete()
     .eq('game_code', gameCode)
     .eq('quarter', quarter);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Admin: mark whether a handle claimed their prize
+app.post('/admin/prize-claims', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.body.game_code || '').trim().toUpperCase();
+  const handle = String(req.body.handle || '').trim();
+  const claimed = req.body.claimed === true || req.body.claimed === 'true';
+
+  if (!gameCode || !handle) {
+    return res.status(400).json({ error: 'game_code and handle are required.' });
+  }
+
+  const { error } = await supabase
+    .from('holding_prize_claims')
+    .upsert(
+      { game_code: gameCode, handle, claimed, updated_at: new Date().toISOString() },
+      { onConflict: 'game_code,handle' }
+    );
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
