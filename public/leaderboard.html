@@ -321,13 +321,8 @@
         let holdingText = 'Not posted yet';
 
         if (row) {
-          if (row.handle) {
-            leaderText = row.handle;
-            holdingText = row.holding_player || '';
-          } else {
-            leaderText = 'No winner';
-            holdingText = 'Nobody was holding';
-          }
+          leaderText = row.handle || 'No winner';
+          holdingText = row.holding_player || 'No one was holding the ball';
         }
 
         return `
