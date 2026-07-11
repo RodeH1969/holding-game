@@ -163,18 +163,20 @@ app.get('/api/leaderboard/:code', async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
   const { data, error } = await supabase
     .from('holding_quarter_leaders')
-    .select('handle')
+    .select('handle, quarter')
     .eq('game_code', gameCode)
     .not('handle', 'is', null);
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const counts = {};
+  // Points are weighted by which quarter was won: Q1 = 1pt, Q2 = 2pts,
+  // Q3 = 3pts, Q4 = 4pts — not a flat 1 point per quarter win.
+  const totals = {};
   for (const row of data) {
-    counts[row.handle] = (counts[row.handle] || 0) + 1;
+    totals[row.handle] = (totals[row.handle] || 0) + row.quarter;
   }
 
-  const leaderboard = Object.entries(counts)
+  const leaderboard = Object.entries(totals)
     .map(([handle, points]) => ({ handle, points }))
     .sort((a, b) => b.points - a.points || a.handle.localeCompare(b.handle));
 
