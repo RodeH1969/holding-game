@@ -33,7 +33,7 @@
     margin: 8px auto 24px;
   }
   form { margin-bottom: 20px; }
-  input {
+  input, select {
     width: 100%;
     padding: 18px 16px;
     margin-bottom: 16px;
@@ -45,7 +45,7 @@
     font-weight: 500;
   }
   input::placeholder { color: #7a7a7a; }
-  input:focus { outline: none; border-color: var(--accent); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
 
   button {
     width: 100%;
@@ -230,7 +230,7 @@
   #claimModal .modal-box strong { font-weight: 800; }
 
   .games-available {
-    margin: 0 0 24px;
+    margin: 0 0 20px;
     text-align: center;
   }
   .games-available h3 {
@@ -245,7 +245,7 @@
     border: 3px solid var(--border);
     border-radius: 14px;
     padding: 14px 16px;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
     animation: pulse-glow-pink 1.8s ease-in-out infinite;
   }
   @keyframes pulse-glow-pink {
@@ -259,11 +259,13 @@
     font-weight: 700;
     font-size: 1rem;
     margin-bottom: 4px;
+    text-align: center;
   }
   .game-item .game-datetime {
     font-size: 0.82rem;
     color: var(--muted);
     margin-bottom: 10px;
+    text-align: center;
   }
   .game-code-row {
     display: flex;
@@ -302,13 +304,16 @@
     border-color: #157a3e;
   }
   .game-badge {
-    display: inline-block;
+    display: block;
+    text-align: center;
     padding: 3px 12px;
     border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    width: fit-content;
+    margin: 0 auto;
   }
   .game-badge.open { background: #dcf5e3; color: #157a3e; }
   .game-badge.closed { background: #fbdcdc; color: #b31d1d; }
@@ -328,7 +333,111 @@
     margin-right: auto;
   }
 
-
+  .section-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 20px 0 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 0.9rem;
+  }
+  th {
+    background: #111;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+  }
+  tbody tr:nth-child(even) { background: #f7f7f7; }
+  tbody tr:not(:last-child) td { border-bottom: 1px solid #e5e5e5; }
+  td.rank { font-weight: 800; width: 36px; }
+  td.points { font-weight: 800; text-align: right; }
+  td.holding { color: var(--muted); font-size: 0.82rem; }
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 16px 10px;
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+  .winner-badge {
+    display: inline-block;
+    background: #ffd700;
+    color: #7a5c00;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 6px;
+    animation: winner-flash 1s ease-in-out infinite;
+  }
+  @keyframes winner-flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .winner-badge { animation: none; }
+  }
+  .prize-thumb {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-left: 6px;
+    border-radius: 4px;
+  }
+  .prize2-box {
+    margin-bottom: 10px;
+    border: 3px solid #000;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .prize2-box img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .prize2-box .prize2-text {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .prize2-box.empty {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 0.82rem;
+    justify-content: center;
+    text-align: center;
+  }
+  .claim-status {
+    margin-bottom: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 2px solid #000;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .claim-status.claimed { background: #dcf5e3; color: #157a3e; }
+  .claim-status.not-claimed { background: #fbdcdc; color: #b31d1d; }
 </style>
 </head>
 <body>
@@ -337,41 +446,12 @@
 
     <div class="games-available">
       <h3>Games available to enter</h3>
-      <div class="game-item" data-game-code="PIESVROOSR18">
-        <div class="game-name">Collingwood v North Melbourne</div>
-        <div class="game-datetime">Round 18 · Friday 10 July 2026 · 7:40 PM (GMT+10)</div>
-        <div class="game-code-row">
-          <span class="game-code-label">Code: <strong>PIESVROOSR18</strong></span>
-          <button type="button" class="copy-btn" data-copy-code="PIESVROOSR18">Copy</button>
-        </div>
-        <div class="game-badge open">Open</div>
-      </div>
-      <div class="game-item" data-game-code="SAINTSVPOWERR18">
-        <div class="game-name">St Kilda v Port Adelaide</div>
-        <div class="game-datetime">Round 18 · Saturday 11 July 2026 · 1:15 PM (AEST)</div>
-        <div class="game-code-row">
-          <span class="game-code-label">Code: <strong>SAINTSVPOWERR18</strong></span>
-          <button type="button" class="copy-btn" data-copy-code="SAINTSVPOWERR18">Copy</button>
-        </div>
-        <div class="game-badge open">Open</div>
-      </div>
+      <select id="gameSelect">
+        <option value="">-- Select a game --</option>
+      </select>
     </div>
 
-    <a class="leaderboard-link" href="/leaderboard.html">View Leaderboard →</a>
-
-    <form id="entryForm" novalidate>
-      <input type="text" id="gameCode" placeholder="Game Code *" autocomplete="off">
-      <input type="text" id="handle" placeholder="Handle (shown on leaderboard) *" autocomplete="off">
-      <input type="tel" id="phone" placeholder="Mobile *" autocomplete="off">
-      <button type="submit" id="submitBtn">Get My 4 Players</button>
-    </form>
-
-    <div class="message" id="message"></div>
-
-    <div class="result" id="result">
-      <h2>Your players</h2>
-      <div id="players"></div>
-    </div>
+    <div id="dynamicGameArea"></div>
 
     <div class="prizes">
       Prize 1: Highest Total Points after 4 quarters. 1 x 6 Pack of Guinness Cans<br>
@@ -431,69 +511,21 @@
   </div>
 
 <script>
-  const form = document.getElementById('entryForm');
-  const submitBtn = document.getElementById('submitBtn');
-  const messageEl = document.getElementById('message');
-  const resultEl = document.getElementById('result');
-  const playersEl = document.getElementById('players');
+  // ---- Game display info: update this whenever a new game is added ----
+  // (name, round and datetime aren't stored in the database - status/open-closed is)
+  const GAMES_INFO = {
+    'FREOVSWANSR18': { name: 'Fremantle v Sydney', round: 'Round 18', datetime: 'Thursday 9 July 2026 · 8:10 PM (AEST)' },
+    'PIESVROOSR18': { name: 'Collingwood v North Melbourne', round: 'Round 18', datetime: 'Friday 10 July 2026 · 7:40 PM (GMT+10)' },
+    'SAINTSVPOWERR18': { name: 'St Kilda v Port Adelaide', round: 'Round 18', datetime: 'Saturday 11 July 2026 · 1:15 PM (AEST)' },
+  };
 
-  // ---- Live open/closed status for each listed game ----
-  const gameItems = document.querySelectorAll('.game-item[data-game-code]');
-  const closedCodes = new Set();
+  const gameSelect = document.getElementById('gameSelect');
+  const dynamicGameArea = document.getElementById('dynamicGameArea');
 
-  const leaderboardLink = document.querySelector('.leaderboard-link');
-  if (leaderboardLink && gameItems.length === 1) {
-    leaderboardLink.href = `/leaderboard.html?code=${encodeURIComponent(gameItems[0].dataset.gameCode)}`;
-  }
+  let gamesList = [];
+  let statusPollTimer = null;
 
-  async function refreshGameStatuses() {
-    for (const item of gameItems) {
-      const code = item.dataset.gameCode;
-      try {
-        const res = await fetch(`/api/game-status/${encodeURIComponent(code)}`);
-        const data = await res.json();
-        const badge = item.querySelector('.game-badge');
-        const isClosed = data.status === 'closed';
-        badge.textContent = isClosed ? 'Entries Closed' : 'Open';
-        badge.classList.toggle('open', !isClosed);
-        badge.classList.toggle('closed', isClosed);
-        if (isClosed) {
-          closedCodes.add(code.toUpperCase());
-        } else {
-          closedCodes.delete(code.toUpperCase());
-        }
-      } catch (err) {
-        // network hiccup - leave badge as-is, try again next poll
-      }
-    }
-  }
-
-  // ---- Copy game code button ----
-  document.querySelectorAll('.copy-btn[data-copy-code]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const code = btn.dataset.copyCode;
-      try {
-        await navigator.clipboard.writeText(code);
-      } catch (err) {
-        // clipboard API unavailable - still fill the field below
-      }
-      const gameCodeField = document.getElementById('gameCode');
-      if (gameCodeField) gameCodeField.value = code;
-
-      const originalText = btn.textContent;
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = originalText;
-        btn.classList.remove('copied');
-      }, 1500);
-    });
-  });
-
-  refreshGameStatuses();
-  setInterval(refreshGameStatuses, 15000);
-
-  // ---- Modals ----
+  // ---- Modals (defined early since render functions below call openModal) ----
   function openModal(id) {
     document.getElementById(id).classList.add('show');
   }
@@ -511,54 +543,308 @@
     });
   });
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    messageEl.textContent = '';
-    resultEl.classList.remove('show');
-
-    const game_code = document.getElementById('gameCode').value.trim();
-    const handle = document.getElementById('handle').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-
-    if (!game_code || !handle || !phone) {
-      openModal('validationModal');
-      return;
-    }
-
-    if (closedCodes.has(game_code.toUpperCase())) {
-      messageEl.textContent = 'Entries are closed for this game — it has already started.';
-      return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Getting Players...';
-
+  // ---- Populate the dropdown, grouped by round ----
+  async function loadGamesDropdown() {
     try {
-      const res = await fetch('/api/enter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_code, handle, phone })
+      const res = await fetch('/api/games');
+      if (!res.ok) return;
+      gamesList = await res.json();
+
+      const byRound = {};
+      gamesList.forEach(g => {
+        const info = GAMES_INFO[g.game_code] || { name: g.game_code, round: 'Other' };
+        if (!byRound[info.round]) byRound[info.round] = [];
+        byRound[info.round].push({ ...g, name: info.name });
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        messageEl.textContent = data.error || 'Something went wrong.';
-        return;
+      let html = '<option value="">-- Select a game --</option>';
+      for (const round of Object.keys(byRound)) {
+        html += `<optgroup label="${round}">`;
+        html += byRound[round].map(g =>
+          `<option value="${g.game_code}">${g.name} (${g.status})</option>`
+        ).join('');
+        html += '</optgroup>';
       }
-
-      playersEl.innerHTML = data.players
-        .map(p => `<div class="player-row">${p}</div>`)
-        .join('');
-      resultEl.classList.add('show');
-      form.reset();
-      openModal('screenshotModal');
+      gameSelect.innerHTML = html;
     } catch (err) {
-      messageEl.textContent = 'Network error. Try again.';
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Get My 4 Players';
+      // silent
+    }
+  }
+
+  gameSelect.addEventListener('change', () => {
+    const code = gameSelect.value;
+    if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
+    if (!code) { dynamicGameArea.innerHTML = ''; return; }
+    const match = gamesList.find(g => g.game_code === code);
+    if (!match) return;
+    if (match.status === 'closed') {
+      renderClosedGame(code);
+    } else {
+      renderOpenGame(code);
     }
   });
+
+  loadGamesDropdown();
+
+  // ==================================================================
+  // OPEN GAME VIEW — entry form
+  // ==================================================================
+  function renderOpenGame(code) {
+    const info = GAMES_INFO[code] || { name: code, round: '', datetime: '' };
+
+    dynamicGameArea.innerHTML = `
+      <div class="game-item" data-game-code="${code}">
+        <div class="game-name">${info.name}</div>
+        <div class="game-datetime">${info.round} · ${info.datetime}</div>
+        <div class="game-code-row">
+          <span class="game-code-label">Code: <strong>${code}</strong></span>
+          <button type="button" class="copy-btn" data-copy-code="${code}">Copy</button>
+        </div>
+        <div class="game-badge open" id="statusBadge">Open</div>
+      </div>
+
+      <form id="entryForm" novalidate>
+        <input type="text" id="gameCode" value="${code}" readonly>
+        <input type="text" id="handle" placeholder="Handle (shown on leaderboard) *" autocomplete="off">
+        <input type="tel" id="phone" placeholder="Mobile *" autocomplete="off">
+        <button type="submit" id="submitBtn">Get My 4 Players</button>
+      </form>
+
+      <div class="message" id="message"></div>
+
+      <div class="result" id="result">
+        <h2>Your players</h2>
+        <div id="players"></div>
+      </div>
+
+      <a class="leaderboard-link" href="/leaderboard.html?code=${code}">View Leaderboard →</a>
+    `;
+
+    wireCopyButton(code);
+    wireEntryForm(code);
+
+    let isClosed = false;
+    async function pollStatus() {
+      try {
+        const res = await fetch(`/api/game-status/${encodeURIComponent(code)}`);
+        const data = await res.json();
+        const badge = document.getElementById('statusBadge');
+        if (!badge) return; // view has changed since this poll started
+        isClosed = data.status === 'closed';
+        badge.textContent = isClosed ? 'Entries Closed' : 'Open';
+        badge.classList.toggle('open', !isClosed);
+        badge.classList.toggle('closed', isClosed);
+      } catch (err) {
+        // silent - try again next poll
+      }
+    }
+    pollStatus();
+    statusPollTimer = setInterval(pollStatus, 15000);
+
+    function wireCopyButton(code) {
+      const btn = dynamicGameArea.querySelector('.copy-btn[data-copy-code]');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(code);
+        } catch (err) {
+          // clipboard API unavailable - field is already filled below regardless
+        }
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+    }
+
+    function wireEntryForm(code) {
+      const form = document.getElementById('entryForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const messageEl = document.getElementById('message');
+      const resultEl = document.getElementById('result');
+      const playersEl = document.getElementById('players');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        messageEl.textContent = '';
+        resultEl.classList.remove('show');
+
+        const game_code = code;
+        const handle = document.getElementById('handle').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+
+        if (!game_code || !handle || !phone) {
+          openModal('validationModal');
+          return;
+        }
+
+        if (isClosed) {
+          messageEl.textContent = 'Entries are closed for this game — it has already started.';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Getting Players...';
+
+        try {
+          const res = await fetch('/api/enter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ game_code, handle, phone })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            messageEl.textContent = data.error || 'Something went wrong.';
+            return;
+          }
+
+          playersEl.innerHTML = data.players
+            .map(p => `<div class="player-row">${p}</div>`)
+            .join('');
+          resultEl.classList.add('show');
+          document.getElementById('handle').value = '';
+          document.getElementById('phone').value = '';
+          openModal('screenshotModal');
+        } catch (err) {
+          messageEl.textContent = 'Network error. Try again.';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Get My 4 Players';
+        }
+      });
+    }
+  }
+
+  // ==================================================================
+  // CLOSED GAME VIEW — Quarter Winners + Total Points + Prize 2
+  // ==================================================================
+  function renderClosedGame(code) {
+    const info = GAMES_INFO[code] || { name: code, round: '', datetime: '' };
+
+    dynamicGameArea.innerHTML = `
+      <div class="game-item" data-game-code="${code}">
+        <div class="game-name">${info.name}</div>
+        <div class="game-datetime">${info.round} · ${info.datetime}</div>
+        <div class="game-code-row">
+          <span class="game-code-label">Code: <strong>${code}</strong></span>
+        </div>
+        <div class="game-badge closed">Entries Closed</div>
+      </div>
+
+      <div class="section-title">Quarter Winners</div>
+      <div id="quarterWrapMain"></div>
+
+      <div class="section-title">Total Points</div>
+      <div id="boardWrapMain"></div>
+      <div id="claimStatusWrapMain"></div>
+
+      <div class="section-title">Prize 2</div>
+      <div id="prize2WrapMain"></div>
+
+      <a class="leaderboard-link" href="/leaderboard.html?code=${code}">View Full Leaderboard →</a>
+    `;
+
+    loadQuarterWinnersMain(code);
+    loadTotalPointsMain(code);
+    loadPrize2Main(code);
+  }
+
+  async function loadQuarterWinnersMain(code) {
+    const wrap = document.getElementById('quarterWrapMain');
+    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        wrap.innerHTML = '<div class="empty-state">Could not load quarter winners.</div>';
+        return;
+      }
+      const byQuarter = {};
+      data.forEach(row => { byQuarter[row.quarter] = row; });
+
+      const rows = [1, 2, 3, 4].map(q => {
+        const row = byQuarter[q];
+        let leaderText = '—';
+        let holdingText = 'Not posted yet';
+        if (row) {
+          leaderText = row.handle || 'No winner';
+          holdingText = row.holding_player || 'No one was holding the ball';
+        }
+        return `<tr><td class="rank">Q${q}</td><td>${leaderText}</td><td class="holding">${holdingText}</td></tr>`;
+      }).join('');
+
+      wrap.innerHTML = `<table><thead><tr><th>Qtr</th><th>Winner</th><th>Holding</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } catch (err) {
+      wrap.innerHTML = '<div class="empty-state">Network error.</div>';
+    }
+  }
+
+  async function loadTotalPointsMain(code) {
+    const wrap = document.getElementById('boardWrapMain');
+    const claimWrap = document.getElementById('claimStatusWrapMain');
+    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    claimWrap.innerHTML = '';
+    try {
+      const res = await fetch(`/api/leaderboard/${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        wrap.innerHTML = '<div class="empty-state">Could not load leaderboard.</div>';
+        return;
+      }
+      if (!data.length) {
+        wrap.innerHTML = '<div class="empty-state">No Winner as noone received any points.</div>';
+        return;
+      }
+      const rows = data.map((row, i) => `
+        <tr>
+          <td class="rank">${i + 1}</td>
+          <td>${row.handle}${i === 0 ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
+          <td class="points">${row.points}</td>
+        </tr>
+      `).join('');
+      wrap.innerHTML = `<table><thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead><tbody>${rows}</tbody></table>`;
+
+      // Claim status for the leader
+      try {
+        const cRes = await fetch(`/api/prize-claims/${encodeURIComponent(code)}`);
+        if (cRes.ok) {
+          const claims = await cRes.json();
+          const record = claims.find(c => c.handle === data[0].handle);
+          const claimed = record ? record.claimed : false;
+          claimWrap.innerHTML = claimed
+            ? `<div class="claim-status claimed">✅ ${data[0].handle} has claimed their prize.</div>`
+            : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
+        }
+      } catch (err) {
+        // silent
+      }
+    } catch (err) {
+      wrap.innerHTML = '<div class="empty-state">Network error.</div>';
+    }
+  }
+
+  async function loadPrize2Main(code) {
+    const wrap = document.getElementById('prize2WrapMain');
+    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const res = await fetch(`/api/prize2-winner/${encodeURIComponent(code)}`);
+      const data = await res.json();
+      wrap.innerHTML = data.winner
+        ? `
+          <div class="prize2-box">
+            <img src="/carton_of_guinness_cans.png" alt="Carton of Guinness cans">
+            <div class="prize2-text">🎉 Prize 2 winner: <strong>${data.winner}</strong> — all 4 of their players held the ball!</div>
+          </div>
+        `
+        : `<div class="prize2-box empty">No Prize 2 Winner this game. Come back and try the next game!!!</div>`;
+    } catch (err) {
+      wrap.innerHTML = '<div class="empty-state">Network error.</div>';
+    }
+  }
 </script>
 </body>
 </html>

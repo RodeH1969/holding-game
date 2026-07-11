@@ -354,12 +354,15 @@
   const quarterWrap = document.getElementById('quarterWrap');
 
   let currentCode = '';
+  let currentGameStatus = null;
+  let gamesList = [];
 
   async function loadGamesDropdown(preselectCode) {
     try {
       const res = await fetch('/api/games');
       if (!res.ok) return;
       const games = await res.json();
+      gamesList = games;
       gameCodeSelect.innerHTML = '<option value="">-- select a game --</option>' +
         games.map(g => `<option value="${g.game_code}">${g.game_code} (${g.status})</option>`).join('');
 
@@ -367,6 +370,7 @@
         const match = games.find(g => g.game_code === preselectCode.toUpperCase());
         if (match) {
           gameCodeSelect.value = match.game_code;
+          currentGameStatus = match.status;
           loadLeaderboard(match.game_code);
         }
       }
@@ -491,7 +495,7 @@
             <div class="prize2-text">🎉 Prize 2 winner: <strong>${data.winner}</strong> — all 4 of their players held the ball!</div>
           </div>
         `
-        : `<div class="prize2-box empty">No Prize 2 winner yet — nobody's had all 4 players hold the ball.</div>`;
+        : `<div class="prize2-box empty">No Prize 2 Winner this game. Come back and try the next game!!!</div>`;
     } catch (err) {
       // silent
     }
@@ -499,7 +503,10 @@
 
   gameCodeSelect.addEventListener('change', () => {
     const code = gameCodeSelect.value;
-    if (code) loadLeaderboard(code);
+    if (!code) return;
+    const match = gamesList.find(g => g.game_code === code);
+    currentGameStatus = match ? match.status : null;
+    loadLeaderboard(code);
   });
 
   // Populate the dropdown; auto-load from ?code=XYZ if present
@@ -507,10 +514,11 @@
   const initialCode = params.get('code');
   loadGamesDropdown(initialCode);
 
-  // Refresh every 5s so results appear live as the Games Master posts them
+  // Re-check every 30 minutes, and only while the game is still open —
+  // once it's closed the result won't change, so there's no need to keep polling.
   setInterval(() => {
-    if (currentCode) loadLeaderboard(currentCode);
-  }, 5000);
+    if (currentCode && currentGameStatus === 'open') loadLeaderboard(currentCode);
+  }, 30 * 60 * 1000);
 
   // ---- Claim popup ----
   function openModal(id) {
