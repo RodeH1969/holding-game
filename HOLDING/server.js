@@ -252,14 +252,15 @@ app.get('/admin/handles/:code', checkAdminPassword, async (req, res) => {
 app.post('/admin/quarter-leaders', checkAdminPassword, async (req, res) => {
   const gameCode = String(req.body.game_code || '').trim().toUpperCase();
   const quarter = parseInt(req.body.quarter, 10);
-  // Both handle and holding_player are independently optional now:
-  // - holding_player blank/absent = nobody was holding the ball
-  // - handle blank/absent = nobody's combo won, even if a player was holding it
-  const handle = String(req.body.handle || '').trim() || null;
-  const holdingPlayer = String(req.body.holding_player || '').trim() || null;
+  const noLeader = req.body.no_leader === true || req.body.no_leader === 'true';
+  const handle = noLeader ? null : String(req.body.handle || '').trim();
+  const holdingPlayer = noLeader ? null : (String(req.body.holding_player || '').trim() || null);
 
   if (!gameCode || ![1, 2, 3, 4].includes(quarter)) {
     return res.status(400).json({ error: 'game_code and quarter (1-4) are required.' });
+  }
+  if (!noLeader && !handle) {
+    return res.status(400).json({ error: 'Enter a handle, or tick "No leader this quarter".' });
   }
 
   const { error } = await supabase

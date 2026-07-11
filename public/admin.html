@@ -300,6 +300,7 @@
       if (!res.ok) return;
       const handles = await res.json();
       qlHandleInput.innerHTML = '<option value="">-- select handle --</option>' +
+        '<option value="__NONE__">No one won (nobody\'s combo included the holding player)</option>' +
         handles.map(h => `<option value="${h}">${h}</option>`).join('');
     } catch (err) {
       // silent
@@ -324,12 +325,12 @@
   });
   document.getElementById('qlSaveBtn').addEventListener('click', saveQuarterWinner);
 
-  // Picking "No one had a player holding the ball" auto-clears/locks the handle dropdown,
-  // since nobody can have won that quarter if nobody was holding the ball.
+  // Picking "No one had a player holding the ball" auto-sets the handle to
+  // "No one won" too, since nobody can have won if nobody was holding it.
   qlHoldingPlayerInput.addEventListener('change', () => {
     const noOne = qlHoldingPlayerInput.value === '';
     qlHandleInput.disabled = noOne;
-    if (noOne) qlHandleInput.value = '';
+    if (noOne) qlHandleInput.value = '__NONE__';
   });
 
   function selectForQuarterWinners(gameCode) {
@@ -390,19 +391,29 @@
     const gameCode = qlGameCodeInput.value;
     const quarter = qlQuarterInput.value;
     const holdingPlayer = qlHoldingPlayerInput.value;
-    const noLeader = holdingPlayer === '';
-    const handle = qlHandleInput.value;
+    const rawHandle = qlHandleInput.value;
 
     if (!gameCode) {
       alert('Select a game code.');
       return;
     }
-    if (!noLeader && !handle) {
-      alert('Select the handle who won, or choose "No one had a player holding the ball".');
+    if (rawHandle === '') {
+      alert('Select the handle who won, or choose "No one won".');
       return;
     }
 
-    const summary = noLeader ? 'No one had a player holding the ball' : `"${handle}" (holding: ${holdingPlayer})`;
+    const noWinner = rawHandle === '__NONE__';
+    const handle = noWinner ? '' : rawHandle;
+
+    let summary;
+    if (holdingPlayer === '') {
+      summary = 'No one had a player holding the ball';
+    } else if (noWinner) {
+      summary = `"${holdingPlayer}" was holding, but No one won`;
+    } else {
+      summary = `"${handle}" won (holding: ${holdingPlayer})`;
+    }
+
     const confirmed = confirm(`Save Quarter ${quarter} for ${gameCode} as: ${summary}?`);
     if (!confirmed) return;
 
@@ -410,7 +421,7 @@
       const res = await fetch(`/admin/quarter-leaders?pw=${encodeURIComponent(currentPw)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_code: gameCode, quarter, handle, holding_player: holdingPlayer, no_leader: noLeader })
+        body: JSON.stringify({ game_code: gameCode, quarter, handle, holding_player: holdingPlayer })
       });
       if (!res.ok) {
         alert('Could not save quarter winner.');
