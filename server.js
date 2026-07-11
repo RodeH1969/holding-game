@@ -147,6 +147,17 @@ app.get('/api/game-status/:code', async (req, res) => {
   res.json({ game_code: gameCode, status: data ? data.status : 'open' });
 });
 
+// ---------- Public: list every game code that's ever been used (for the leaderboard dropdown) ----------
+app.get('/api/games', async (req, res) => {
+  const { data, error } = await supabase
+    .from('holding_games')
+    .select('game_code, status, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // ---------- Public: leaderboard for a game (auto-computed from Quarter Winners) ----------
 app.get('/api/leaderboard/:code', async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();

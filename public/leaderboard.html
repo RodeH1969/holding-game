@@ -51,25 +51,15 @@
     margin-left: auto;
     margin-right: auto;
   }
-  .code-form { display: flex; gap: 8px; margin-bottom: 20px; }
-  .code-form input {
-    flex: 1;
+  .code-form { margin-bottom: 20px; }
+  .code-form select {
+    width: 100%;
     padding: 14px 16px;
     background: var(--input-fill);
     border: 3px solid var(--border);
     border-radius: 14px;
     font-size: 1rem;
-  }
-  .code-form button {
-    padding: 14px 18px;
-    background: var(--accent);
-    border: 3px solid var(--border);
-    border-radius: 14px;
-    color: #fff;
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: 0.85rem;
-    cursor: pointer;
+    color: var(--text);
   }
   .game-label {
     text-align: center;
@@ -259,10 +249,11 @@
 
     <button type="button" class="claim-btn" id="claimBtn">How to Claim Prizes</button>
 
-    <form class="code-form" id="codeForm">
-      <input type="text" id="gameCodeInput" placeholder="Game code" autocomplete="off" required>
-      <button type="submit">View</button>
-    </form>
+    <div class="code-form">
+      <select id="gameCodeSelect">
+        <option value="">-- select a game --</option>
+      </select>
+    </div>
 
     <div class="game-label" id="gameLabel"></div>
 
@@ -283,13 +274,32 @@
   </div>
 
 <script>
-  const codeForm = document.getElementById('codeForm');
-  const gameCodeInput = document.getElementById('gameCodeInput');
+  const gameCodeSelect = document.getElementById('gameCodeSelect');
   const gameLabel = document.getElementById('gameLabel');
   const boardWrap = document.getElementById('boardWrap');
   const quarterWrap = document.getElementById('quarterWrap');
 
   let currentCode = '';
+
+  async function loadGamesDropdown(preselectCode) {
+    try {
+      const res = await fetch('/api/games');
+      if (!res.ok) return;
+      const games = await res.json();
+      gameCodeSelect.innerHTML = '<option value="">-- select a game --</option>' +
+        games.map(g => `<option value="${g.game_code}">${g.game_code} (${g.status})</option>`).join('');
+
+      if (preselectCode) {
+        const match = games.find(g => g.game_code === preselectCode.toUpperCase());
+        if (match) {
+          gameCodeSelect.value = match.game_code;
+          loadLeaderboard(match.game_code);
+        }
+      }
+    } catch (err) {
+      // silent - dropdown just stays with the default option
+    }
+  }
 
   async function loadQuarterLeaders(code) {
     quarterWrap.innerHTML = '<div class="empty-state">Loading...</div>';
@@ -379,19 +389,15 @@
     }
   }
 
-  codeForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const code = gameCodeInput.value.trim();
+  gameCodeSelect.addEventListener('change', () => {
+    const code = gameCodeSelect.value;
     if (code) loadLeaderboard(code);
   });
 
-  // Auto-load from ?code=XYZ if present
+  // Populate the dropdown; auto-load from ?code=XYZ if present
   const params = new URLSearchParams(window.location.search);
   const initialCode = params.get('code');
-  if (initialCode) {
-    gameCodeInput.value = initialCode;
-    loadLeaderboard(initialCode);
-  }
+  loadGamesDropdown(initialCode);
 
   // Refresh every 5s so results appear live as the Games Master posts them
   setInterval(() => {
