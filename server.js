@@ -22,23 +22,29 @@ const supabase = createClient(
 const COMBOS_DIR = path.join(__dirname, 'combos');
 const gamesCombos = {}; // gameCode -> { combos: {1: [...], ...}, max: N, players: [...] }
 
-for (const filename of fs.readdirSync(COMBOS_DIR)) {
-  if (!filename.endsWith('.txt')) continue;
-  const gameCode = filename.replace(/\.txt$/, '').toUpperCase();
-  const rawLines = fs.readFileSync(path.join(COMBOS_DIR, filename), 'utf8').split('\n').filter(Boolean);
+if (!fs.existsSync(COMBOS_DIR)) {
+  console.error(`WARNING: combos/ folder not found at ${COMBOS_DIR}.`);
+  console.error('The server will start, but every /api/enter request will fail with "Unknown game code" until this is fixed.');
+  console.error('Check that the combos/ folder (with your GAMECODE.txt files inside) was committed and pushed to GitHub.');
+} else {
+  for (const filename of fs.readdirSync(COMBOS_DIR)) {
+    if (!filename.endsWith('.txt')) continue;
+    const gameCode = filename.replace(/\.txt$/, '').toUpperCase();
+    const rawLines = fs.readFileSync(path.join(COMBOS_DIR, filename), 'utf8').split('\n').filter(Boolean);
 
-  const combos = { 0: null };
-  for (const line of rawLines) {
-    const dotIdx = line.indexOf('.');
-    const n = parseInt(line.slice(0, dotIdx), 10);
-    const players = line.slice(dotIdx + 1).split('|').map((p) => p.trim());
-    combos[n] = players;
+    const combos = { 0: null };
+    for (const line of rawLines) {
+      const dotIdx = line.indexOf('.');
+      const n = parseInt(line.slice(0, dotIdx), 10);
+      const players = line.slice(dotIdx + 1).split('|').map((p) => p.trim());
+      combos[n] = players;
+    }
+
+    const players = [...new Set(Object.values(combos).filter(Boolean).flat())].sort();
+
+    gamesCombos[gameCode] = { combos, max: rawLines.length, players };
+    console.log(`Loaded ${rawLines.length} combinations for ${gameCode}`);
   }
-
-  const players = [...new Set(Object.values(combos).filter(Boolean).flat())].sort();
-
-  gamesCombos[gameCode] = { combos, max: rawLines.length, players };
-  console.log(`Loaded ${rawLines.length} combinations for ${gameCode}`);
 }
 
 // ---------- Phone normalisation ----------
