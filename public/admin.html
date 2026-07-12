@@ -138,10 +138,36 @@
   <div id="status"></div>
 
   <div id="content" style="display:none;">
+    <div class="lb-section" style="margin-top:0; padding-top:0; border-top:none;">
+      <h2>Add / Edit Game</h2>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Game code must match a file already in your combos/ folder (e.g. combos/EAGLESVDOGSR18.txt → code EAGLESVDOGSR18). Restart the server after adding a new combos file before using it here.</p>
+      <div class="lb-form">
+        <div>
+          <label>Game code</label>
+          <input type="text" id="gmCode" placeholder="e.g. EAGLESVDOGSR18">
+        </div>
+        <div>
+          <label>Display name</label>
+          <input type="text" id="gmName" placeholder="e.g. Western Bulldogs v West Coast Eagles">
+        </div>
+      </div>
+      <div class="lb-form">
+        <div>
+          <label>Round</label>
+          <input type="text" id="gmRound" placeholder="e.g. Round 18">
+        </div>
+        <div>
+          <label>Date &amp; time</label>
+          <input type="datetime-local" id="gmDatetime">
+        </div>
+        <button id="gmSaveBtn">Save Game</button>
+      </div>
+    </div>
+
     <button id="downloadAll">Download ALL entries (.xlsx)</button>
     <table id="gamesTable">
       <thead>
-        <tr><th>Game code</th><th>Entries given out</th><th>Status</th><th></th></tr>
+        <tr><th>Game code</th><th>Name</th><th>Round / Time</th><th>Entries</th><th>Status</th><th></th></tr>
       </thead>
       <tbody id="gamesBody"></tbody>
     </table>
@@ -236,6 +262,44 @@
   let currentPw = '';
 
   document.getElementById('loginBtn').addEventListener('click', loadGames);
+  document.getElementById('gmSaveBtn').addEventListener('click', saveGameMeta);
+
+  async function saveGameMeta() {
+    const gameCode = document.getElementById('gmCode').value.trim();
+    const displayName = document.getElementById('gmName').value.trim();
+    const round = document.getElementById('gmRound').value.trim();
+    const datetimeLocal = document.getElementById('gmDatetime').value;
+
+    if (!gameCode) {
+      alert('Enter a game code.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/games?pw=${encodeURIComponent(currentPw)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          game_code: gameCode,
+          display_name: displayName,
+          round,
+          event_datetime: datetimeLocal || null,
+        })
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || 'Could not save game.');
+        return;
+      }
+      document.getElementById('gmCode').value = '';
+      document.getElementById('gmName').value = '';
+      document.getElementById('gmRound').value = '';
+      document.getElementById('gmDatetime').value = '';
+      loadGames();
+    } catch (err) {
+      alert('Network error.');
+    }
+  }
   document.getElementById('downloadAll').addEventListener('click', () => download('ALL'));
 
   async function loadGames() {
@@ -254,6 +318,8 @@
       gamesBody.innerHTML = games.map(g => `
         <tr>
           <td>${g.game_code}</td>
+          <td>${g.display_name || '—'}</td>
+          <td>${g.round || ''}${g.round && g.event_datetime ? ' · ' : ''}${g.event_datetime ? new Date(g.event_datetime).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</td>
           <td>${g.current_index}</td>
           <td><span class="badge ${g.status}">${g.status}</span></td>
           <td class="row-actions">
@@ -264,7 +330,7 @@
             <button onclick="selectForQuarterWinners('${g.game_code}')">Quarter Winners</button>
           </td>
         </tr>
-      `).join('') || '<tr><td colspan="4">No games yet.</td></tr>';
+      `).join('') || '<tr><td colspan="6">No games yet.</td></tr>';
 
       qlGameCodeInput.innerHTML = '<option value="">-- select a game --</option>' +
         games.map(g => `<option value="${g.game_code}">${g.game_code} (${g.status})</option>`).join('');

@@ -151,8 +151,8 @@ app.get('/api/game-status/:code', async (req, res) => {
 app.get('/api/games', async (req, res) => {
   const { data, error } = await supabase
     .from('holding_games')
-    .select('game_code, status, created_at')
-    .order('created_at', { ascending: false });
+    .select('game_code, status, display_name, round, event_datetime, created_at')
+    .order('event_datetime', { ascending: true, nullsFirst: false });
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -258,10 +258,57 @@ function checkAdminPassword(req, res, next) {
 app.get('/admin/games', checkAdminPassword, async (req, res) => {
   const { data, error } = await supabase
     .from('holding_games')
-    .select('game_code, current_index, status')
+    .select('game_code, current_index, status, display_name, round, event_datetime')
     .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+// Admin: create a new game or update an existing game's display info
+// (name/round/date). Does NOT touch status or current_index if the game
+// already exists — only the display metadata.
+app.post('/admin/games', checkAdminPassword, async (req, res) => {
+  const gameCode = String(req.body.game_code || '').trim().toUpperCase();
+  const displayName = String(req.body.display_name || '').trim() || null;
+  const round = String(req.body.round || '').trim() || null;
+  const eventDatetime = req.body.event_datetime ? new Date(req.body.event_datetime).toISOString() : null;
+
+  if (!gameCode) {
+    return res.status(400).json({ error: 'game_code is required.' });
+  }
+  if (!gamesCombos[gameCode]) {
+    return res.status(400).json({ error: `No combos file found for ${gameCode}. Add combos/${gameCode}.txt and restart the server first.` });
+  }
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from('holding_games')
+    .select('game_code')
+    .eq('game_code', gameCode)
+    .maybeSingle();
+
+  if (fetchErr) return res.status(500).json({ error: fetchErr.message });
+
+  if (existing) {
+    const { error } = await supabase
+      .from('holding_games')
+      .update({ display_name: displayName, round, event_datetime: eventDatetime })
+      .eq('game_code', gameCode);
+    if (error) return res.status(500).json({ error: error.message });
+  } else {
+    const { error } = await supabase
+      .from('holding_games')
+      .insert({
+        game_code: gameCode,
+        current_index: 0,
+        status: 'open',
+        display_name: displayName,
+        round,
+        event_datetime: eventDatetime,
+      });
+    if (error) return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ ok: true });
 });
 
 // Open or close entries for a game code

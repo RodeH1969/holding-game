@@ -511,19 +511,23 @@
   </div>
 
 <script>
-  // ---- Game display info: update this whenever a new game is added ----
-  // (name, round and datetime aren't stored in the database - status/open-closed is)
-  const GAMES_INFO = {
-    'FREOVSWANSR18': { name: 'Fremantle v Sydney', round: 'Round 18', datetime: 'Thursday 9 July 2026 · 8:10 PM (AEST)' },
-    'PIESVROOSR18': { name: 'Collingwood v North Melbourne', round: 'Round 18', datetime: 'Friday 10 July 2026 · 7:40 PM (GMT+10)' },
-    'SAINTSVPOWERR18': { name: 'St Kilda v Port Adelaide', round: 'Round 18', datetime: 'Saturday 11 July 2026 · 1:15 PM (AEST)' },
-  };
-
   const gameSelect = document.getElementById('gameSelect');
   const dynamicGameArea = document.getElementById('dynamicGameArea');
 
   let gamesList = [];
   let statusPollTimer = null;
+
+  function formatDatetime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('en-AU', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short'
+    });
+  }
+
+  function formatRoundLine(info) {
+    return [info.round, info.datetime].filter(Boolean).join(' · ');
+  }
 
   // ---- Modals (defined early since render functions below call openModal) ----
   function openModal(id) {
@@ -552,16 +556,16 @@
 
       const byRound = {};
       gamesList.forEach(g => {
-        const info = GAMES_INFO[g.game_code] || { name: g.game_code, round: 'Other' };
-        if (!byRound[info.round]) byRound[info.round] = [];
-        byRound[info.round].push({ ...g, name: info.name });
+        const round = g.round || 'Other';
+        if (!byRound[round]) byRound[round] = [];
+        byRound[round].push(g);
       });
 
       let html = '<option value="">-- Select a game --</option>';
       for (const round of Object.keys(byRound)) {
         html += `<optgroup label="${round}">`;
         html += byRound[round].map(g =>
-          `<option value="${g.game_code}">${g.name} (${g.status})</option>`
+          `<option value="${g.game_code}">${g.display_name || g.game_code} (${g.status})</option>`
         ).join('');
         html += '</optgroup>';
       }
@@ -590,12 +594,17 @@
   // OPEN GAME VIEW — entry form
   // ==================================================================
   function renderOpenGame(code) {
-    const info = GAMES_INFO[code] || { name: code, round: '', datetime: '' };
+    const match = gamesList.find(g => g.game_code === code) || {};
+    const info = {
+      name: match.display_name || code,
+      round: match.round || '',
+      datetime: formatDatetime(match.event_datetime)
+    };
 
     dynamicGameArea.innerHTML = `
       <div class="game-item" data-game-code="${code}">
         <div class="game-name">${info.name}</div>
-        <div class="game-datetime">${info.round} · ${info.datetime}</div>
+        <div class="game-datetime">${formatRoundLine(info)}</div>
         <div class="game-code-row">
           <span class="game-code-label">Code: <strong>${code}</strong></span>
           <button type="button" class="copy-btn" data-copy-code="${code}">Copy</button>
@@ -723,12 +732,17 @@
   // CLOSED GAME VIEW — Quarter Winners + Total Points + Prize 2
   // ==================================================================
   function renderClosedGame(code) {
-    const info = GAMES_INFO[code] || { name: code, round: '', datetime: '' };
+    const match = gamesList.find(g => g.game_code === code) || {};
+    const info = {
+      name: match.display_name || code,
+      round: match.round || '',
+      datetime: formatDatetime(match.event_datetime)
+    };
 
     dynamicGameArea.innerHTML = `
       <div class="game-item" data-game-code="${code}">
         <div class="game-name">${info.name}</div>
-        <div class="game-datetime">${info.round} · ${info.datetime}</div>
+        <div class="game-datetime">${formatRoundLine(info)}</div>
         <div class="game-code-row">
           <span class="game-code-label">Code: <strong>${code}</strong></span>
         </div>
