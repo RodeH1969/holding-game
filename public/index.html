@@ -554,21 +554,21 @@
       if (!res.ok) return;
       gamesList = await res.json();
 
-      const byRound = {};
-      gamesList.forEach(g => {
-        const round = g.round || 'Other';
-        if (!byRound[round]) byRound[round] = [];
-        byRound[round].push(g);
-      });
+      const open = gamesList.filter(g => g.status === 'open');
+      const closed = gamesList.filter(g => g.status === 'closed');
+
+      function optionsFor(games) {
+        return games.map(g => {
+          const label = g.round
+            ? `${g.display_name || g.game_code} (${g.round})`
+            : (g.display_name || g.game_code);
+          return `<option value="${g.game_code}">${label}</option>`;
+        }).join('');
+      }
 
       let html = '<option value="">-- Select a game --</option>';
-      for (const round of Object.keys(byRound)) {
-        html += `<optgroup label="${round}">`;
-        html += byRound[round].map(g =>
-          `<option value="${g.game_code}">${g.display_name || g.game_code} (${g.status})</option>`
-        ).join('');
-        html += '</optgroup>';
-      }
+      if (open.length) html += `<optgroup label="Open">${optionsFor(open)}</optgroup>`;
+      if (closed.length) html += `<optgroup label="Closed">${optionsFor(closed)}</optgroup>`;
       gameSelect.innerHTML = html;
     } catch (err) {
       // silent
