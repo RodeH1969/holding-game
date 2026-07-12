@@ -33,12 +33,21 @@ if (!fs.existsSync(COMBOS_DIR)) {
     const rawLines = fs.readFileSync(path.join(COMBOS_DIR, filename), 'utf8').split('\n').filter(Boolean);
 
     const combos = { 0: null };
-    for (const line of rawLines) {
-      const dotIdx = line.indexOf('.');
-      const n = parseInt(line.slice(0, dotIdx), 10);
-      const players = line.slice(dotIdx + 1).split('|').map((p) => p.trim());
-      combos[n] = players;
-    }
+    rawLines.forEach((line, idx) => {
+      // Handle Windows line endings (\r\n) leaving a trailing \r.
+      const clean = line.replace(/\r$/, '');
+      // Strip a leading "N. " if present, but always index by line
+      // position — don't trust the embedded number, since some combo
+      // files have it and some don't.
+      const stripped = clean.replace(/^\d+\.\s*/, '');
+      // Some files use "|" to separate players, others use ",". Detect
+      // whichever this file actually uses.
+      const delimiter = stripped.includes('|') ? '|' : ',';
+      const players = stripped.split(delimiter).map((p) => p.trim()).filter(Boolean);
+      if (players.length === 4) {
+        combos[idx + 1] = players;
+      }
+    });
 
     const players = [...new Set(Object.values(combos).filter(Boolean).flat())].sort();
 
