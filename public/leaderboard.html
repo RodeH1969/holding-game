@@ -340,8 +340,8 @@
     <div class="modal-box">
       <button class="modal-close" type="button" data-close="claimModal">✕</button>
       <h3>How to Claim Prizes</h3>
-      <p>Prize 1<br>Text <strong class="pulse-leader">"LEADER"</strong><br>to Game Master 0459 754 708</p>
-      <p>Prize 2<br>Text <strong>"WINNER"</strong><br>to Game Master 0459 754 708</p>
+      <p><strong>Prize 1</strong><br>You must be the LEADER on Total Points after all 4 quarters have been decided. If you're leading, text <strong class="pulse-leader">"LEADER"</strong> to Game Master 0459 754 708 before the final siren.</p>
+      <p><strong>Prize 2</strong><br>ALL 4 of your players must have held the ball at some point across the 4 quarters. If they have, text <strong>"WINNER"</strong> to Game Master 0459 754 708 before the final siren.</p>
     </div>
   </div>
 
@@ -379,98 +379,101 @@
     }
   }
 
-  async function loadQuarterLeaders(code) {
-    quarterWrap.innerHTML = '<div class="empty-state">Loading...</div>';
-    try {
-      const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
-      const data = await res.json();
+  let requestToken = 0;
 
-      if (!res.ok) {
-        quarterWrap.innerHTML = '<div class="empty-state">Could not load quarter winners.</div>';
-        return;
+  function renderQuarterTable(data) {
+    const byQuarter = {};
+    data.forEach(row => { byQuarter[row.quarter] = row; });
+
+    const rows = [1, 2, 3, 4].map(q => {
+      const row = byQuarter[q];
+      let leaderText = '—';
+      let holdingText = 'Not posted yet';
+      if (row) {
+        leaderText = row.handle || 'No winner';
+        holdingText = row.holding_player || 'No one was holding the ball';
       }
+      return `<tr><td class="quarter">Q${q}</td><td>${leaderText}</td><td class="holding">${holdingText}</td></tr>`;
+    }).join('');
 
-      const byQuarter = {};
-      data.forEach(row => { byQuarter[row.quarter] = row; });
-
-      const rows = [1, 2, 3, 4].map(q => {
-        const row = byQuarter[q];
-        let leaderText = '—';
-        let holdingText = 'Not posted yet';
-
-        if (row) {
-          leaderText = row.handle || 'No winner';
-          holdingText = row.holding_player || 'No one was holding the ball';
-        }
-
-        return `
-          <tr>
-            <td class="quarter">Q${q}</td>
-            <td>${leaderText}</td>
-            <td class="holding">${holdingText}</td>
-          </tr>
-        `;
-      }).join('');
-
-      quarterWrap.innerHTML = `
-        <table>
-          <thead><tr><th>Qtr</th><th>Winner</th><th>Holding</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-    } catch (err) {
-      quarterWrap.innerHTML = '<div class="empty-state">Network error. Try again.</div>';
-    }
+    return `<table><thead><tr><th>Qtr</th><th>Winner</th><th>Holding</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   async function loadLeaderboard(code) {
+    const myToken = ++requestToken;
     currentCode = code.toUpperCase();
     gameLabel.innerHTML = `Standings for <span>${currentCode}</span>`;
     boardWrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    quarterWrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    claimStatusWrap.innerHTML = '';
+    prize2Wrap.innerHTML = '<div class="empty-state">Loading...</div>';
 
-    loadQuarterLeaders(currentCode);
-    loadPrize2Winner(currentCode);
+    // Quarter Winners — also tells us whether all 4 quarters have actually
+    // been decided yet, since the Total Points "WINNER" badge and prize
+    // claim status should only ever appear once the game is fully over.
+    let quarterData = [];
+    try {
+      const qRes = await fetch(`/api/quarter-leaders/${encodeURIComponent(currentCode)}`);
+      if (myToken !== requestToken) return; // a newer game was selected while this was in flight
+      if (qRes.ok) {
+        quarterData = await qRes.json();
+        if (myToken !== requestToken) return;
+      }
+    } catch (err) {
+      if (myToken !== requestToken) return;
+    }
+    quarterWrap.innerHTML = renderQuarterTable(quarterData);
+    const gameComplete = quarterData.length === 4;
 
+    // Total Points
     try {
       const res = await fetch(`/api/leaderboard/${encodeURIComponent(currentCode)}`);
       const data = await res.json();
+      if (myToken !== requestToken) return;
 
       if (!res.ok) {
         boardWrap.innerHTML = '<div class="empty-state">Could not load leaderboard.</div>';
-        return;
-      }
-      if (!data.length) {
+      } else if (!data.length) {
         boardWrap.innerHTML = '<div class="empty-state">No Winner as noone received any points.</div>';
-        return;
+      } else {
+        const rows = data.map((row, i) => {
+          const showWinnerBadge = i === 0 && gameComplete;
+          return `
+            <tr>
+              <td class="rank">${i + 1}</td>
+              <td>${row.handle}${showWinnerBadge ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
+              <td class="points">${row.points}</td>
+            </tr>
+          `;
+        }).join('');
+
+        boardWrap.innerHTML = `
+          <table>
+            <thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${!gameComplete ? '<div class="empty-state">Game in progress — standings are provisional until all 4 quarters are posted.</div>' : ''}
+        `;
+
+        if (gameComplete) {
+          loadClaimStatus(currentCode, data[0].handle, myToken);
+        }
       }
-
-      const rows = data.map((row, i) => `
-        <tr>
-          <td class="rank">${i + 1}</td>
-          <td>${row.handle}${i === 0 ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
-          <td class="points">${row.points}</td>
-        </tr>
-      `).join('');
-
-      boardWrap.innerHTML = `
-        <table>
-          <thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-
-      loadClaimStatus(currentCode, data[0].handle);
     } catch (err) {
+      if (myToken !== requestToken) return;
       boardWrap.innerHTML = '<div class="empty-state">Network error. Try again.</div>';
     }
+
+    loadPrize2Winner(currentCode, myToken);
   }
 
-  async function loadClaimStatus(code, leaderHandle) {
-    claimStatusWrap.innerHTML = '';
+  async function loadClaimStatus(code, leaderHandle, myToken) {
     try {
       const res = await fetch(`/api/prize-claims/${encodeURIComponent(code)}`);
+      if (myToken !== requestToken) return;
       if (!res.ok) return;
       const claims = await res.json();
+      if (myToken !== requestToken) return;
       const record = claims.find(c => c.handle === leaderHandle);
       const claimed = record ? record.claimed : false;
 
@@ -482,11 +485,13 @@
     }
   }
 
-  async function loadPrize2Winner(code) {
+  async function loadPrize2Winner(code, myToken) {
     try {
       const res = await fetch(`/api/prize2-winner/${encodeURIComponent(code)}`);
+      if (myToken !== requestToken) return;
       if (!res.ok) return;
       const data = await res.json();
+      if (myToken !== requestToken) return;
 
       prize2Wrap.innerHTML = data.winner
         ? `

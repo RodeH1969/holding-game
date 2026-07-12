@@ -32,7 +32,15 @@ if (!fs.existsSync(COMBOS_DIR)) {
     const gameCode = filename.replace(/\.txt$/, '').toUpperCase();
     const rawLines = fs.readFileSync(path.join(COMBOS_DIR, filename), 'utf8').split('\n').filter(Boolean);
 
+    // Instead of storing each combo as 4 full player-name strings (which
+    // duplicates the same ~46 names hundreds of thousands of times and
+    // eats huge amounts of memory across several large games at once),
+    // store a shared list of unique player names and have each combo just
+    // reference 4 small index numbers into that list.
+    const playerToIndex = new Map();
+    const playerList = [];
     const combos = { 0: null };
+
     rawLines.forEach((line, idx) => {
       // Handle Windows line endings (\r\n) leaving a trailing \r.
       const clean = line.replace(/\r$/, '');
@@ -44,14 +52,22 @@ if (!fs.existsSync(COMBOS_DIR)) {
       // whichever this file actually uses.
       const delimiter = stripped.includes('|') ? '|' : ',';
       const players = stripped.split(delimiter).map((p) => p.trim()).filter(Boolean);
-      if (players.length === 4) {
-        combos[idx + 1] = players;
-      }
+      if (players.length !== 4) return;
+
+      combos[idx + 1] = players.map((p) => {
+        let i = playerToIndex.get(p);
+        if (i === undefined) {
+          i = playerList.length;
+          playerList.push(p);
+          playerToIndex.set(p, i);
+        }
+        return i;
+      });
     });
 
-    const players = [...new Set(Object.values(combos).filter(Boolean).flat())].sort();
+    const sortedPlayers = [...playerList].sort();
 
-    gamesCombos[gameCode] = { combos, max: rawLines.length, players };
+    gamesCombos[gameCode] = { combos, max: rawLines.length, players: sortedPlayers, playerList };
     console.log(`Loaded ${rawLines.length} combinations for ${gameCode}`);
   }
 }
@@ -120,10 +136,11 @@ app.post('/api/enter', async (req, res) => {
       return res.status(409).json({ error: 'All combinations for this game have been given out.' });
     }
 
-    const players = gameData.combos[nextIndex];
-    if (!players) {
+    const comboIndices = gameData.combos[nextIndex];
+    if (!comboIndices) {
       return res.status(500).json({ error: 'Combination lookup failed.' });
     }
+    const players = comboIndices.map((i) => gameData.playerList[i]);
 
     const { error: insertErr } = await supabase.from('holding_entries').insert({
       game_code: gameCode,

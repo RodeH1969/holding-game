@@ -488,8 +488,8 @@
       <button class="modal-close" type="button" data-close="claimModal">✕</button>
       <h3>How to Claim Prizes</h3>
       <p>The Games Master will post the official results after each quarter in the Leaderboard tab.</p>
-      <p>To claim Prize 1: The player who is leading at 10 minutes on the clock of the 4th quarter must text the Games Master before the final siren. The text message must say:<br><strong>"LEADER"</strong></p>
-      <p>To claim Prize 2: Text the Games Master before the final siren of the 4th quarter. The text message must say:<br><strong>"WINNER"</strong></p>
+      <p><strong>Prize 1</strong><br>You must be the LEADER on Total Points after all 4 quarters have been decided. If you're leading, text the Games Master before the final siren. The text message must say:<br><strong>"LEADER"</strong></p>
+      <p><strong>Prize 2</strong><br>ALL 4 of your players must have held the ball at some point across the 4 quarters. If they have, text the Games Master before the final siren. The text message must say:<br><strong>"WINNER"</strong></p>
     </div>
   </div>
 
@@ -515,6 +515,7 @@
   const dynamicGameArea = document.getElementById('dynamicGameArea');
 
   let gamesList = [];
+  let closedViewToken = 0;
   let statusPollTimer = null;
 
   function formatDatetime(iso) {
@@ -578,6 +579,7 @@
   gameSelect.addEventListener('change', () => {
     const code = gameSelect.value;
     if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
+    closedViewToken++; // invalidate any in-flight closed-game fetches from the previous selection
     if (!code) { dynamicGameArea.innerHTML = ''; return; }
     const match = gamesList.find(g => g.game_code === code);
     if (!match) return;
@@ -738,6 +740,7 @@
       round: match.round || '',
       datetime: formatDatetime(match.event_datetime)
     };
+    const myToken = ++closedViewToken;
 
     dynamicGameArea.innerHTML = `
       <div class="game-item" data-game-code="${code}">
@@ -762,101 +765,117 @@
       <a class="leaderboard-link" href="/leaderboard.html?code=${code}">View Full Leaderboard →</a>
     `;
 
-    loadQuarterWinnersMain(code);
-    loadTotalPointsMain(code);
-    loadPrize2Main(code);
+    loadClosedGameData(code, myToken);
   }
 
-  async function loadQuarterWinnersMain(code) {
-    const wrap = document.getElementById('quarterWrapMain');
-    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
-    try {
-      const res = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
-      const data = await res.json();
-      if (!res.ok) {
-        wrap.innerHTML = '<div class="empty-state">Could not load quarter winners.</div>';
-        return;
-      }
-      const byQuarter = {};
-      data.forEach(row => { byQuarter[row.quarter] = row; });
-
-      const rows = [1, 2, 3, 4].map(q => {
-        const row = byQuarter[q];
-        let leaderText = '—';
-        let holdingText = 'Not posted yet';
-        if (row) {
-          leaderText = row.handle || 'No winner';
-          holdingText = row.holding_player || 'No one was holding the ball';
-        }
-        return `<tr><td class="rank">Q${q}</td><td>${leaderText}</td><td class="holding">${holdingText}</td></tr>`;
-      }).join('');
-
-      wrap.innerHTML = `<table><thead><tr><th>Qtr</th><th>Winner</th><th>Holding</th></tr></thead><tbody>${rows}</tbody></table>`;
-    } catch (err) {
-      wrap.innerHTML = '<div class="empty-state">Network error.</div>';
-    }
-  }
-
-  async function loadTotalPointsMain(code) {
-    const wrap = document.getElementById('boardWrapMain');
+  async function loadClosedGameData(code, myToken) {
+    const quarterWrap = document.getElementById('quarterWrapMain');
+    const boardWrap = document.getElementById('boardWrapMain');
     const claimWrap = document.getElementById('claimStatusWrapMain');
-    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
-    claimWrap.innerHTML = '';
+    const prize2Wrap = document.getElementById('prize2WrapMain');
+
+    quarterWrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    boardWrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    prize2Wrap.innerHTML = '<div class="empty-state">Loading...</div>';
+
+    // Quarter Winners — also determines whether the game is actually
+    // finished (all 4 quarters decided), which gates the Winner badge and
+    // claim-status messaging below.
+    let quarterData = [];
+    try {
+      const qRes = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
+      if (myToken !== closedViewToken) return;
+      if (qRes.ok) {
+        quarterData = await qRes.json();
+        if (myToken !== closedViewToken) return;
+      }
+    } catch (err) {
+      if (myToken !== closedViewToken) return;
+    }
+
+    const byQuarter = {};
+    quarterData.forEach(row => { byQuarter[row.quarter] = row; });
+    const qRows = [1, 2, 3, 4].map(q => {
+      const row = byQuarter[q];
+      let leaderText = '—';
+      let holdingText = 'Not posted yet';
+      if (row) {
+        leaderText = row.handle || 'No winner';
+        holdingText = row.holding_player || 'No one was holding the ball';
+      }
+      return `<tr><td class="rank">Q${q}</td><td>${leaderText}</td><td class="holding">${holdingText}</td></tr>`;
+    }).join('');
+    quarterWrap.innerHTML = `<table><thead><tr><th>Qtr</th><th>Winner</th><th>Holding</th></tr></thead><tbody>${qRows}</tbody></table>`;
+
+    const gameComplete = quarterData.length === 4;
+
     try {
       const res = await fetch(`/api/leaderboard/${encodeURIComponent(code)}`);
       const data = await res.json();
-      if (!res.ok) {
-        wrap.innerHTML = '<div class="empty-state">Could not load leaderboard.</div>';
-        return;
-      }
-      if (!data.length) {
-        wrap.innerHTML = '<div class="empty-state">No Winner as noone received any points.</div>';
-        return;
-      }
-      const rows = data.map((row, i) => `
-        <tr>
-          <td class="rank">${i + 1}</td>
-          <td>${row.handle}${i === 0 ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
-          <td class="points">${row.points}</td>
-        </tr>
-      `).join('');
-      wrap.innerHTML = `<table><thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead><tbody>${rows}</tbody></table>`;
+      if (myToken !== closedViewToken) return;
 
-      // Claim status for the leader
-      try {
-        const cRes = await fetch(`/api/prize-claims/${encodeURIComponent(code)}`);
-        if (cRes.ok) {
-          const claims = await cRes.json();
-          const record = claims.find(c => c.handle === data[0].handle);
-          const claimed = record ? record.claimed : false;
-          claimWrap.innerHTML = claimed
-            ? `<div class="claim-status claimed">✅ ${data[0].handle} has claimed their prize.</div>`
-            : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
+      if (!res.ok) {
+        boardWrap.innerHTML = '<div class="empty-state">Could not load leaderboard.</div>';
+      } else if (!data.length) {
+        boardWrap.innerHTML = '<div class="empty-state">No Winner as noone received any points.</div>';
+      } else {
+        const rows = data.map((row, i) => {
+          const showWinnerBadge = i === 0 && gameComplete;
+          return `
+            <tr>
+              <td class="rank">${i + 1}</td>
+              <td>${row.handle}${showWinnerBadge ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
+              <td class="points">${row.points}</td>
+            </tr>
+          `;
+        }).join('');
+        boardWrap.innerHTML = `
+          <table>
+            <thead><tr><th>#</th><th>Handle</th><th>Points</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${!gameComplete ? '<div class="empty-state">Game in progress — standings are provisional until all 4 quarters are posted.</div>' : ''}
+        `;
+
+        if (gameComplete) {
+          try {
+            const cRes = await fetch(`/api/prize-claims/${encodeURIComponent(code)}`);
+            if (myToken !== closedViewToken) return;
+            if (cRes.ok) {
+              const claims = await cRes.json();
+              if (myToken !== closedViewToken) return;
+              const record = claims.find(c => c.handle === data[0].handle);
+              const claimed = record ? record.claimed : false;
+              claimWrap.innerHTML = claimed
+                ? `<div class="claim-status claimed">✅ ${data[0].handle} has claimed their prize.</div>`
+                : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
+            }
+          } catch (err) {
+            // silent
+          }
         }
-      } catch (err) {
-        // silent
       }
     } catch (err) {
-      wrap.innerHTML = '<div class="empty-state">Network error.</div>';
+      if (myToken !== closedViewToken) return;
+      boardWrap.innerHTML = '<div class="empty-state">Network error.</div>';
     }
-  }
 
-  async function loadPrize2Main(code) {
-    const wrap = document.getElementById('prize2WrapMain');
-    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
     try {
-      const res = await fetch(`/api/prize2-winner/${encodeURIComponent(code)}`);
-      const data = await res.json();
-      wrap.innerHTML = data.winner
+      const p2Res = await fetch(`/api/prize2-winner/${encodeURIComponent(code)}`);
+      if (myToken !== closedViewToken) return;
+      const p2Data = await p2Res.json();
+      if (myToken !== closedViewToken) return;
+      prize2Wrap.innerHTML = p2Data.winner
         ? `
           <div class="prize2-box">
             <img src="/carton_of_guinness_cans.png" alt="Carton of Guinness cans">
-            <div class="prize2-text">🎉 Prize 2 winner: <strong>${data.winner}</strong> — all 4 of their players held the ball!</div>
+            <div class="prize2-text">🎉 Prize 2 winner: <strong>${p2Data.winner}</strong> — all 4 of their players held the ball!</div>
           </div>
         `
         : `<div class="prize2-box empty">No Prize 2 Winner this game. Come back and try the next game!!!</div>`;
     } catch (err) {
-      wrap.innerHTML = '<div class="empty-state">Network error.</div>';
+      if (myToken !== closedViewToken) return;
+      prize2Wrap.innerHTML = '<div class="empty-state">Network error.</div>';
     }
   }
 </script>
