@@ -845,10 +845,11 @@
               const claims = await cRes.json();
               if (myToken !== closedViewToken) return;
               const record = claims.find(c => c.handle === data[0].handle);
-              const claimed = record ? record.claimed : false;
-              claimWrap.innerHTML = claimed
-                ? `<div class="claim-status claimed">✅ ${data[0].handle} has claimed their prize.</div>`
-                : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
+              if (record) {
+                claimWrap.innerHTML = record.claimed
+                  ? `<div class="claim-status claimed">✅ ${data[0].handle} has claimed their prize.</div>`
+                  : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
+              }
             }
           } catch (err) {
             // silent

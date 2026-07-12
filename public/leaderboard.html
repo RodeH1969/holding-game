@@ -475,9 +475,15 @@
       const claims = await res.json();
       if (myToken !== requestToken) return;
       const record = claims.find(c => c.handle === leaderHandle);
-      const claimed = record ? record.claimed : false;
 
-      claimStatusWrap.innerHTML = claimed
+      // Only show a claimed/failed banner once the admin has actually
+      // recorded something in Prize Claims. No record yet = say nothing.
+      if (!record) {
+        claimStatusWrap.innerHTML = '';
+        return;
+      }
+
+      claimStatusWrap.innerHTML = record.claimed
         ? `<div class="claim-status claimed">✅ ${leaderHandle} has claimed their prize.</div>`
         : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
     } catch (err) {
