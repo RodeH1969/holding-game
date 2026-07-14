@@ -2,15 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>HOLDING</title>
 <style>
   :root {
     --accent: #ff5757;
+    --gold: #FFD700;
+    --danger: #FF3C3C;
+    --success: #2ECC71;
+    --blue: #3498DB;
     --input-fill: #d5d5d5;
     --border: #000;
     --text: #111;
     --muted: #6b6b6b;
+    --safe-vh: 1vh;
+    --glass-bg: rgba(10, 15, 12, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.15);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -171,6 +178,7 @@
     .ticker-track { animation: none; }
   }
 
+  /* Modals Base */
   .modal-overlay {
     display: none;
     position: fixed;
@@ -450,6 +458,231 @@
   }
   .claim-status.claimed { background: #dcf5e3; color: #157a3e; }
   .claim-status.not-claimed { background: #fbdcdc; color: #b31d1d; }
+
+  /* --------------------------------------------------------
+     PREMIUM MOBILE-FIRST FULL-SCREEN STORY DECK LAYOUT
+     -------------------------------------------------------- */
+  .interactive-deck-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 200;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .interactive-deck-overlay.active {
+    display: block;
+    opacity: 1;
+  }
+
+  .mobile-deck {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 85vh;
+    background: #000;
+    border-top-left-radius: 35px;
+    border-top-right-radius: 35px;
+    z-index: 210;
+    transform: translateY(100%);
+    transition: transform 0.5s cubic-bezier(0.15, 0.85, 0.3, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .mobile-deck.active {
+    transform: translateY(0);
+  }
+
+  .story-progress-container {
+    width: 100%;
+    padding: 15px 20px 5px 20px;
+    display: flex;
+    gap: 5px;
+    z-index: 230;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+  }
+  .progress-bar-segment {
+    flex-grow: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    transition: width 0.3s ease;
+  }
+  .progress-bar-segment.viewed .progress-bar-fill {
+    width: 100%;
+  }
+  .progress-bar-segment.active .progress-bar-fill {
+    width: 100%;
+  }
+
+  .slider-viewport {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease-in-out;
+  }
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .slide-bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.6) contrast(1.05);
+    transform: scale(1);
+    transition: transform 8s cubic-bezier(0.1, 0.8, 0.2, 1);
+  }
+  .slide.active .slide-bg-img {
+    transform: scale(1.1);
+  }
+
+  /* Custom Crop Modifiers */
+  .crop-left img, img.crop-left { object-position: left center !important; }
+  .crop-top img, img.crop-top { object-position: center top !important; }
+  .crop-center img, img.crop-center { object-position: center center !important; }
+
+  .slide-hud-card {
+    position: absolute;
+    bottom: 120px;
+    left: 15px;
+    right: 15px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 22px 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    text-align: center;
+    transform: translateY(30px) scale(0.96);
+    opacity: 0;
+    transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.15) 0.1s;
+  }
+  .slide.active .slide-hud-card {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  .slide-title {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 2.1rem;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin: 0 0 8px 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  }
+  .slide-sub {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-weight: bold;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #eee;
+    margin: 0;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+  }
+
+  .nav-controls {
+    position: absolute;
+    bottom: 25px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 220;
+  }
+  .nav-btn {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #fff;
+    border: 1px solid var(--glass-border);
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: background 0.2s;
+  }
+  .nav-btn:active {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+  }
+
+  .dots-indicator-container {
+    display: flex;
+    gap: 8px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: all 0.2s ease;
+  }
+  .dot.active {
+    background: var(--gold);
+    transform: scale(1.3);
+  }
+
+  .close-interactive-btn {
+    position: absolute;
+    top: 35px;
+    right: 15px;
+    width: 38px;
+    height: 38px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 240;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -522,6 +755,70 @@
     </div>
   </div>
 
+  <div class="interactive-deck-overlay" id="interactiveUnderlay"></div>
+  <div class="mobile-deck" id="interactiveDeck">
+      <div class="story-progress-container" id="story-progress"></div>
+      <button class="close-interactive-btn" id="dismissInteractiveBtn">✕</button>
+
+      <div class="slider-viewport">
+          
+          <div class="slide active">
+              <img class="slide-bg-img crop-left" src="1.jpg" alt="Register">
+              <div class="slide-hud-card" style="border-top: 3px solid var(--gold);">
+                  <h2 class="slide-title" style="color: var(--gold);">REGISTER FREE</h2>
+                  <p class="slide-sub">Enter your Handle & Mobile number to instantly lock in 4 random players. 100% free!</p>
+              </div>
+          </div>
+
+          <div class="slide">
+              <img class="slide-bg-img crop-top" src="6.jpg" alt="Rules">
+              <div class="slide-hud-card" style="border-top: 3px solid var(--blue);">
+                  <h2 class="slide-title" style="color: var(--blue);">SCORING SYSTEM</h2>
+                  <p class="slide-sub">Points scale up every single quarter: Q1 scores 1 Pt, Q2 scores 2 Pts, Q3 scores 3 Pts, Q4 scores 4 Pts!</p>
+              </div>
+          </div>
+
+          <div class="slide">
+              <img class="slide-bg-img crop-center" src="2.jpg" alt="Kicking">
+              <div class="slide-hud-card" style="border-top: 3px solid var(--danger);">
+                  <h2 class="slide-title" style="color: var(--danger);">NOT HOLDING! ❌</h2>
+                  <p class="slide-sub">Kicking or foot contact does NOT count. Zero points. Only hands-on catches qualify.</p>
+              </div>
+          </div>
+
+          <div class="slide">
+              <img class="slide-bg-img crop-top" src="3.jpg" alt="Tapping">
+              <div class="slide-hud-card" style="border-top: 3px solid var(--danger);">
+                  <h2 class="slide-title" style="color: var(--danger);">NOT HOLDING! ❌</h2>
+                  <p class="slide-sub">A single-handed punch, spoil, or tap does NOT qualify. The ball must be fully gripped.</p>
+              </div>
+          </div>
+
+          <div class="slide">
+              <img class="slide-bg-img crop-center" src="4.jpg" alt="Holding">
+              <div class="slide-hud-card" style="border-top: 3px solid var(--success);">
+                  <h2 class="slide-title" style="color: var(--success);">THIS IS HOLDING! 🏈✨</h2>
+                  <p class="slide-sub">Exactly at 10:00 (or first touch before 10:30), a player must physically secure the Sherrin with 2 hands!</p>
+              </div>
+          </div>
+
+          <div class="slide">
+              <img class="slide-bg-img crop-center" src="5.jpg" alt="Guinness Prizes">
+              <div class="slide-hud-card" style="border-top: 3px solid var(--gold);">
+                  <h2 class="slide-title" style="color: var(--gold);">WIN GUINNESS! 🏆</h2>
+                  <p class="slide-sub">Highest points wins a 6-pack. Predict all 4 quarters perfectly to secure a full CARTON of Guinness! 🍻</p>
+              </div>
+          </div>
+
+      </div>
+
+      <div class="nav-controls">
+          <button class="nav-btn" id="prevInteractiveSlide">◀</button>
+          <div class="dots-indicator-container" id="interactiveDotsWrap"></div>
+          <button class="nav-btn" id="nextInteractiveSlide">▶</button>
+      </div>
+  </div>
+
 <script>
   const gameSelect = document.getElementById('gameSelect');
   const dynamicGameArea = document.getElementById('dynamicGameArea');
@@ -542,14 +839,16 @@
     return [info.round, info.datetime].filter(Boolean).join(' · ');
   }
 
-  // ---- Modals (defined early since render functions below call openModal) ----
+  // ---- Modals Logic ----
   function openModal(id) {
     document.getElementById(id).classList.add('show');
   }
   function closeModal(id) {
     document.getElementById(id).classList.remove('show');
   }
-  document.getElementById('rulesBtn').addEventListener('click', () => openModal('rulesModal'));
+  
+  // Wire rules to open the advanced interactive slide container
+  document.getElementById('rulesBtn').addEventListener('click', () => openInteractiveDeck());
   document.getElementById('claimBtn').addEventListener('click', () => openModal('claimModal'));
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.close));
@@ -560,7 +859,7 @@
     });
   });
 
-  // ---- Populate the dropdown, grouped by round ----
+  // ---- Dropdown Aggregator ----
   async function loadGamesDropdown() {
     try {
       const res = await fetch('/api/games');
@@ -591,7 +890,7 @@
   gameSelect.addEventListener('change', () => {
     const code = gameSelect.value;
     if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
-    closedViewToken++; // invalidate any in-flight closed-game fetches from the previous selection
+    closedViewToken++;
     if (!code) { dynamicGameArea.innerHTML = ''; return; }
     const match = gamesList.find(g => g.game_code === code);
     if (!match) return;
@@ -605,7 +904,7 @@
   loadGamesDropdown();
 
   // ==================================================================
-  // OPEN GAME VIEW — entry form
+  // OPEN GAME VIEW
   // ==================================================================
   function renderOpenGame(code) {
     const match = gamesList.find(g => g.game_code === code) || {};
@@ -652,13 +951,13 @@
         const res = await fetch(`/api/game-status/${encodeURIComponent(code)}`);
         const data = await res.json();
         const badge = document.getElementById('statusBadge');
-        if (!badge) return; // view has changed since this poll started
+        if (!badge) return;
         isClosed = data.status === 'closed';
         badge.textContent = isClosed ? 'Entries Closed' : 'Open';
         badge.classList.toggle('open', !isClosed);
         badge.classList.toggle('closed', isClosed);
       } catch (err) {
-        // silent - try again next poll
+        // fallback
       }
     }
     pollStatus();
@@ -670,9 +969,7 @@
       btn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(code);
-        } catch (err) {
-          // clipboard API unavailable - field is already filled below regardless
-        }
+        } catch (err) {}
         const originalText = btn.textContent;
         btn.textContent = 'Copied!';
         btn.classList.add('copied');
@@ -743,7 +1040,7 @@
   }
 
   // ==================================================================
-  // CLOSED GAME VIEW — Quarter Winners + Total Points + Prize 2
+  // CLOSED GAME VIEW
   // ==================================================================
   function renderClosedGame(code) {
     const match = gamesList.find(g => g.game_code === code) || {};
@@ -790,9 +1087,6 @@
     boardWrap.innerHTML = '<div class="empty-state">Loading...</div>';
     prize2Wrap.innerHTML = '<div class="empty-state">Loading...</div>';
 
-    // Quarter Winners — also determines whether the game is actually
-    // finished (all 4 quarters decided), which gates the Winner badge and
-    // claim-status messaging below.
     let quarterData = [];
     try {
       const qRes = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
@@ -863,9 +1157,7 @@
                   : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
               }
             }
-          } catch (err) {
-            // silent
-          }
+          } catch (err) {}
         }
       }
     } catch (err) {
@@ -889,6 +1181,114 @@
     } catch (err) {
       if (myToken !== closedViewToken) return;
       prize2Wrap.innerHTML = '<div class="empty-state">Network error.</div>';
+    }
+  }
+
+  // ====================================================================
+  // STORIES DECK SYSTEM CONTROL INTERACTION
+  // ====================================================================
+  const interactiveUnderlay = document.getElementById('interactiveUnderlay');
+  const interactiveDeck = document.getElementById('interactiveDeck');
+  const dismissInteractiveBtn = document.getElementById('dismissInteractiveBtn');
+  const interactiveSlides = document.querySelectorAll('.slide');
+  const prevInteractiveSlide = document.getElementById('prevInteractiveSlide');
+  const nextInteractiveSlide = document.getElementById('nextInteractiveSlide');
+  const interactiveDotsWrap = document.getElementById('interactiveDotsWrap');
+  const progressContainer = document.getElementById('story-progress');
+
+  let interactiveIndex = 0;
+
+  function setVh() {
+    let vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--safe-vh', `${vh}px`);
+  }
+  window.addEventListener('resize', setVh);
+  window.addEventListener('orientationchange', setVh);
+  setVh();
+
+  // Programmatically setup indicator segments
+  interactiveSlides.forEach((_, idx) => {
+    const dot = document.createElement('div');
+    dot.classList.add('dot');
+    if (idx === 0) dot.classList.add('active');
+    interactiveDotsWrap.appendChild(dot);
+
+    const segment = document.createElement('div');
+    segment.classList.add('progress-bar-segment');
+    if (idx === 0) segment.classList.add('active');
+    
+    const fill = document.createElement('div');
+    fill.classList.add('progress-bar-fill');
+    segment.appendChild(fill);
+    progressContainer.appendChild(segment);
+  });
+
+  const interactiveDots = document.querySelectorAll('.dots-indicator-container .dot');
+  const segments = document.querySelectorAll('.progress-bar-segment');
+
+  function openInteractiveDeck() {
+    interactiveUnderlay.classList.add('active');
+    interactiveDeck.classList.add('active');
+    interactiveIndex = 0;
+    updateInteractiveSlider();
+  }
+
+  function closeInteractiveDeck() {
+    interactiveUnderlay.classList.remove('active');
+    interactiveDeck.classList.remove('active');
+  }
+
+  dismissInteractiveBtn.addEventListener('click', closeInteractiveDeck);
+  interactiveUnderlay.addEventListener('click', closeInteractiveDeck);
+
+  function updateInteractiveSlider() {
+    interactiveSlides.forEach((slide, idx) => {
+      slide.classList.remove('active');
+      interactiveDots[idx].classList.remove('active');
+      
+      segments[idx].classList.remove('active', 'viewed');
+      if (idx < interactiveIndex) {
+        segments[idx].classList.add('viewed');
+      } else if (idx === interactiveIndex) {
+        segments[idx].classList.add('active');
+      }
+    });
+
+    interactiveSlides[interactiveIndex].classList.add('active');
+    interactiveDots[interactiveIndex].classList.add('active');
+  }
+
+  nextInteractiveSlide.addEventListener('click', () => {
+    interactiveIndex = (interactiveIndex + 1) % interactiveSlides.length;
+    updateInteractiveSlider();
+  });
+
+  prevInteractiveSlide.addEventListener('click', () => {
+    interactiveIndex = (interactiveIndex - 1 + interactiveSlides.length) % interactiveSlides.length;
+    updateInteractiveSlider();
+  });
+
+  // Touch Drag / Mobile Swipes Implementation
+  let touchStartX = 0;
+  let touchEndX = 0;
+  
+  interactiveDeck.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  interactiveDeck.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipeGesture();
+  }, { passive: true });
+
+  function handleSwipeGesture() {
+    const delta = touchStartX - touchEndX;
+    if (delta > 45) {
+      interactiveIndex = (interactiveIndex + 1) % interactiveSlides.length;
+      updateInteractiveSlider();
+    } else if (delta < -45) {
+      interactiveIndex = (interactiveIndex - 1 + interactiveSlides.length) % interactiveSlides.length;
+      updateInteractiveSlider();
     }
   }
 </script>
