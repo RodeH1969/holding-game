@@ -2,22 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>HOLDING</title>
 <style>
   :root {
     --accent: #ff5757;
-    --gold: #FFD700;
-    --danger: #FF3C3C;
-    --success: #2ECC71;
-    --blue: #3498DB;
     --input-fill: #d5d5d5;
     --border: #000;
     --text: #111;
     --muted: #6b6b6b;
-    --safe-vh: 1vh;
-    --glass-bg: rgba(10, 15, 12, 0.75);
-    --glass-border: rgba(255, 255, 255, 0.15);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -178,7 +171,6 @@
     .ticker-track { animation: none; }
   }
 
-  /* Modals Base */
   .modal-overlay {
     display: none;
     position: fixed;
@@ -456,19 +448,40 @@
     font-weight: 700;
     text-align: center;
   }
-  .claim-status.claimed { background: #dcf5e3; color: #157a3e; }
-  .claim-status.not-claimed { background: #fbdcdc; color: #b31d1d; }
+  /* ===== How to Play slideshow (namespaced htp- to avoid clashing with
+     the existing .modal-overlay system used by Rules/Claim/etc popups) ===== */
+  :root {
+    --htp-accent: #FFD700;
+    --htp-danger: #FF3C3C;
+    --htp-success: #2ECC71;
+    --htp-blue: #3498DB;
+    --htp-glass-bg: rgba(10, 15, 12, 0.7);
+    --htp-glass-border: rgba(255, 255, 255, 0.12);
+  }
 
-  /* --------------------------------------------------------
-     PREMIUM MOBILE-FIRST FULL-SCREEN STORY DECK LAYOUT
-     -------------------------------------------------------- */
-  .interactive-deck-overlay {
+  .htp-cta-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #000;
+    border: none;
+    padding: 18px 0;
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 50px;
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.35);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-weight: 900;
+    margin-bottom: 20px;
+  }
+  .htp-cta-btn:active { transform: scale(0.96); }
+
+  .htp-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.85);
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.8);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     z-index: 200;
@@ -476,15 +489,11 @@
     opacity: 0;
     transition: opacity 0.4s ease;
   }
-  .interactive-deck-overlay.active {
-    display: block;
-    opacity: 1;
-  }
+  .htp-overlay.active { display: block; opacity: 1; }
 
-  .mobile-deck {
+  .htp-deck {
     position: fixed;
-    bottom: 0;
-    left: 0;
+    bottom: 0; left: 0;
     width: 100vw;
     height: 85vh;
     background: #000;
@@ -497,137 +506,117 @@
     display: flex;
     flex-direction: column;
   }
-  .mobile-deck.active {
-    transform: translateY(0);
-  }
+  .htp-deck.active { transform: translateY(0); }
 
-  .story-progress-container {
+  .htp-progress-container {
     width: 100%;
     padding: 15px 20px 5px 20px;
     display: flex;
     gap: 5px;
     z-index: 230;
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
   }
-  .progress-bar-segment {
+  .htp-progress-segment {
     flex-grow: 1;
     height: 4px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     overflow: hidden;
   }
-  .progress-bar-fill {
+  .htp-progress-fill {
     height: 100%;
     width: 0%;
-    background: var(--gold);
+    background: var(--htp-accent);
     transition: width 0.3s ease;
   }
-  .progress-bar-segment.viewed .progress-bar-fill {
-    width: 100%;
-  }
-  .progress-bar-segment.active .progress-bar-fill {
-    width: 100%;
-  }
+  .htp-progress-segment.viewed .htp-progress-fill { width: 100%; }
+  .htp-progress-segment.active .htp-progress-fill { width: 100%; }
 
-  .slider-viewport {
+  .htp-slider-viewport {
     width: 100%;
     height: 100%;
     position: relative;
     overflow: hidden;
   }
-  .slide {
+  .htp-slide {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.6s ease-in-out;
   }
-  .slide.active {
-    opacity: 1;
-    visibility: visible;
-  }
+  .htp-slide.active { opacity: 1; visibility: visible; }
 
-  .slide-bg-img {
+  .htp-slide-bg-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: brightness(0.6) contrast(1.05);
+    filter: brightness(0.55) contrast(1.1);
     transform: scale(1);
-    transition: transform 8s cubic-bezier(0.1, 0.8, 0.2, 1);
+    transition: transform 10s cubic-bezier(0.1, 0.8, 0.2, 1);
   }
-  .slide.active .slide-bg-img {
-    transform: scale(1.1);
-  }
+  .htp-slide.active .htp-slide-bg-img { transform: scale(1.12); }
 
-  /* Custom Crop Modifiers */
-  .crop-left img, img.crop-left { object-position: left center !important; }
-  .crop-top img, img.crop-top { object-position: center top !important; }
-  .crop-center img, img.crop-center { object-position: center center !important; }
+  .htp-crop-left img { object-position: left center !important; }
+  .htp-crop-top img { object-position: center top !important; }
+  .htp-crop-center img { object-position: center center !important; }
 
-  .slide-hud-card {
+  .htp-slide-hud-card {
     position: absolute;
     bottom: 120px;
-    left: 15px;
-    right: 15px;
-    background: var(--glass-bg);
+    left: 15px; right: 15px;
+    background: var(--htp-glass-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--htp-glass-border);
     border-radius: 24px;
     padding: 22px 20px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
     text-align: center;
-    transform: translateY(30px) scale(0.96);
+    transform: translateY(40px) scale(0.95);
     opacity: 0;
-    transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.15) 0.1s;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.15) 0.15s;
   }
-  .slide.active .slide-hud-card {
+  .htp-slide.active .htp-slide-hud-card {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
-
-  .slide-title {
+  .htp-slide-title {
     font-family: 'Impact', 'Arial Black', sans-serif;
-    font-size: 2.1rem;
+    font-size: 2rem;
     text-transform: uppercase;
     line-height: 1.1;
-    margin: 0 0 8px 0;
+    margin-bottom: 8px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   }
-  .slide-sub {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  .htp-slide-sub {
+    font-family: Arial, sans-serif;
     font-weight: bold;
     font-size: 1rem;
     line-height: 1.4;
     color: #eee;
-    margin: 0;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
   }
 
-  .nav-controls {
+  .htp-nav-controls {
     position: absolute;
     bottom: 25px;
-    left: 15px;
-    right: 15px;
+    left: 15px; right: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 220;
   }
-  .nav-btn {
+  .htp-nav-btn {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: #fff;
-    border: 1px solid var(--glass-border);
-    width: 54px;
-    height: 54px;
+    border: 1px solid var(--htp-glass-border);
+    width: 54px; height: 54px;
     border-radius: 50%;
     font-size: 1.2rem;
     display: flex;
@@ -637,43 +626,39 @@
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     transition: background 0.2s;
   }
-  .nav-btn:active {
-    background: var(--gold);
+  .htp-nav-btn:active {
+    background: var(--htp-accent);
     color: #000;
-    border-color: var(--gold);
+    border-color: var(--htp-accent);
   }
 
-  .dots-indicator-container {
+  .htp-dots-wrap {
     display: flex;
     gap: 8px;
     background: rgba(0,0,0,0.4);
     backdrop-filter: blur(10px);
     padding: 8px 16px;
     border-radius: 20px;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--htp-glass-border);
   }
-  .dot {
-    width: 8px;
-    height: 8px;
+  .htp-dot {
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: rgba(255,255,255,0.3);
     transition: all 0.2s ease;
   }
-  .dot.active {
-    background: var(--gold);
+  .htp-dot.active {
+    background: var(--htp-accent);
     transform: scale(1.3);
   }
 
-  .close-interactive-btn {
+  .htp-close-btn {
     position: absolute;
-    top: 35px;
-    right: 15px;
-    width: 38px;
-    height: 38px;
+    top: 20px; right: 15px;
+    width: 38px; height: 38px;
     background: rgba(0,0,0,0.6);
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--htp-glass-border);
     border-radius: 50%;
     color: #fff;
     font-size: 1.1rem;
@@ -688,6 +673,8 @@
 <body>
   <div class="card">
     <img class="logo" src="/holding_logo.png" alt="HOLDING">
+
+    <button type="button" class="htp-cta-btn" id="htpOpenBtn">HOW TO PLAY</button>
 
     <div class="games-available">
       <h3>Games available to enter</h3>
@@ -755,68 +742,62 @@
     </div>
   </div>
 
-  <div class="interactive-deck-overlay" id="interactiveUnderlay"></div>
-  <div class="mobile-deck" id="interactiveDeck">
-      <div class="story-progress-container" id="story-progress"></div>
-      <button class="close-interactive-btn" id="dismissInteractiveBtn">✕</button>
+  <!-- How to Play slideshow -->
+  <div class="htp-overlay" id="htpUnderlay"></div>
+  <div class="htp-deck" id="htpDeck">
+    <div class="htp-progress-container" id="htpProgress"></div>
+    <button class="htp-close-btn" id="htpDismissBtn">✕</button>
 
-      <div class="slider-viewport">
-          
-          <div class="slide active">
-              <img class="slide-bg-img crop-left" src="/1.jpg" alt="Register">
-              <div class="slide-hud-card" style="border-top: 3px solid var(--gold);">
-                  <h2 class="slide-title" style="color: var(--gold);">REGISTER FREE</h2>
-                  <p class="slide-sub">Enter your Handle & Mobile number to instantly lock in 4 random players. 100% free!</p>
-              </div>
-          </div>
-
-          <div class="slide">
-              <img class="slide-bg-img crop-top" src="/6.jpg" alt="Rules">
-              <div class="slide-hud-card" style="border-top: 3px solid var(--blue);">
-                  <h2 class="slide-title" style="color: var(--blue);">SCORING SYSTEM</h2>
-                  <p class="slide-sub">Points scale up every single quarter: Q1 scores 1 Pt, Q2 scores 2 Pts, Q3 scores 3 Pts, Q4 scores 4 Pts!</p>
-              </div>
-          </div>
-
-          <div class="slide">
-              <img class="slide-bg-img crop-center" src="/2.jpg" alt="Kicking">
-              <div class="slide-hud-card" style="border-top: 3px solid var(--danger);">
-                  <h2 class="slide-title" style="color: var(--danger);">NOT HOLDING! ❌</h2>
-                  <p class="slide-sub">Kicking or foot contact does NOT count. Zero points. Only hands-on catches qualify.</p>
-              </div>
-          </div>
-
-          <div class="slide">
-              <img class="slide-bg-img crop-top" src="/3.jpg" alt="Tapping">
-              <div class="slide-hud-card" style="border-top: 3px solid var(--danger);">
-                  <h2 class="slide-title" style="color: var(--danger);">NOT HOLDING! ❌</h2>
-                  <p class="slide-sub">A single-handed punch, spoil, or tap does NOT qualify. The ball must be fully gripped.</p>
-              </div>
-          </div>
-
-          <div class="slide">
-              <img class="slide-bg-img crop-center" src="/4.jpg" alt="Holding">
-              <div class="slide-hud-card" style="border-top: 3px solid var(--success);">
-                  <h2 class="slide-title" style="color: var(--success);">THIS IS HOLDING! 🏈✨</h2>
-                  <p class="slide-sub">Exactly at 10:00 (or first touch before 10:30), a player must physically secure the Sherrin with 2 hands!</p>
-              </div>
-          </div>
-
-          <div class="slide">
-              <img class="slide-bg-img crop-center" src="/5.jpg" alt="Guinness Prizes">
-              <div class="slide-hud-card" style="border-top: 3px solid var(--gold);">
-                  <h2 class="slide-title" style="color: var(--gold);">WIN GUINNESS! 🏆</h2>
-                  <p class="slide-sub">Highest points wins a 6-pack. Predict all 4 quarters perfectly to secure a full CARTON of Guinness! 🍻</p>
-              </div>
-          </div>
-
+    <div class="htp-slider-viewport">
+      <div class="htp-slide active">
+        <img class="htp-slide-bg-img htp-crop-left" src="/1.jpg" alt="Register">
+        <div class="htp-slide-hud-card" style="border-top: 3px solid var(--htp-accent);">
+          <h2 class="htp-slide-title" style="color: var(--htp-accent);">REGISTER FREE</h2>
+          <p class="htp-slide-sub">Enter your Handle &amp; Mobile number to instantly lock in 4 random players. 100% free!</p>
+        </div>
       </div>
-
-      <div class="nav-controls">
-          <button class="nav-btn" id="prevInteractiveSlide">◀</button>
-          <div class="dots-indicator-container" id="interactiveDotsWrap"></div>
-          <button class="nav-btn" id="nextInteractiveSlide">▶</button>
+      <div class="htp-slide">
+        <img class="htp-slide-bg-img htp-crop-top" src="/6.jpg" alt="Rules">
+        <div class="htp-slide-hud-card" style="border-top: 3px solid var(--htp-blue);">
+          <h2 class="htp-slide-title" style="color: var(--htp-blue);">SCORING SYSTEM</h2>
+          <p class="htp-slide-sub">Points scale up every single quarter: Q1 scores 1 Pt, Q2 scores 2 Pts, Q3 scores 3 Pts, Q4 scores 4 Pts!</p>
+        </div>
       </div>
+      <div class="htp-slide">
+        <img class="htp-slide-bg-img htp-crop-center" src="/2.jpg" alt="Kicking">
+        <div class="htp-slide-hud-card" style="border-top: 3px solid var(--htp-danger);">
+          <h2 class="htp-slide-title" style="color: var(--htp-danger);">NOT HOLDING! ❌</h2>
+          <p class="htp-slide-sub">Kicking or foot contact does NOT count. Zero points. Only hands-on catches qualify.</p>
+        </div>
+      </div>
+      <div class="htp-slide">
+        <img class="htp-slide-bg-img htp-crop-top" src="/3.jpg" alt="Tapping">
+        <div class="htp-slide-hud-card" style="border-top: 3px solid var(--htp-danger);">
+          <h2 class="htp-slide-title" style="color: var(--htp-danger);">NOT HOLDING! ❌</h2>
+          <p class="htp-slide-sub">A single-handed punch, spoil, or tap does NOT qualify. The ball must be fully gripped.</p>
+        </div>
+      </div>
+      <div class="htp-slide">
+        <img class="htp-slide-bg-img htp-crop-center" src="/4.jpg" alt="Holding">
+        <div class="htp-slide-hud-card" style="border-top: 3px solid var(--htp-success);">
+          <h2 class="htp-slide-title" style="color: var(--htp-success);">THIS IS HOLDING! 🏈✨</h2>
+          <p class="htp-slide-sub">Exactly at 10:00 (or first touch before 10:30), a player must physically secure the Sherrin with 2 hands!</p>
+        </div>
+      </div>
+      <div class="htp-slide">
+        <img class="htp-slide-bg-img htp-crop-center" src="/5.jpg" alt="Guinness Prizes">
+        <div class="htp-slide-hud-card" style="border-top: 3px solid var(--htp-accent);">
+          <h2 class="htp-slide-title" style="color: var(--htp-accent);">WIN GUINNESS! 🏆</h2>
+          <p class="htp-slide-sub">Highest points wins a 6-pack. Predict all 4 quarters perfectly to secure a full CARTON of Guinness! 🍻</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="htp-nav-controls">
+      <button class="htp-nav-btn" id="htpPrevBtn">◀</button>
+      <div class="htp-dots-wrap" id="htpDotsWrap"></div>
+      <button class="htp-nav-btn" id="htpNextBtn">▶</button>
+    </div>
   </div>
 
 <script>
@@ -839,16 +820,14 @@
     return [info.round, info.datetime].filter(Boolean).join(' · ');
   }
 
-  // ---- Modals Logic ----
+  // ---- Modals (defined early since render functions below call openModal) ----
   function openModal(id) {
     document.getElementById(id).classList.add('show');
   }
   function closeModal(id) {
     document.getElementById(id).classList.remove('show');
   }
-  
-  // Wire rules to open the advanced interactive slide container
-  document.getElementById('rulesBtn').addEventListener('click', () => openInteractiveDeck());
+  document.getElementById('rulesBtn').addEventListener('click', () => openModal('rulesModal'));
   document.getElementById('claimBtn').addEventListener('click', () => openModal('claimModal'));
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.close));
@@ -859,7 +838,7 @@
     });
   });
 
-  // ---- Dropdown Aggregator ----
+  // ---- Populate the dropdown, grouped by round ----
   async function loadGamesDropdown() {
     try {
       const res = await fetch('/api/games');
@@ -890,7 +869,7 @@
   gameSelect.addEventListener('change', () => {
     const code = gameSelect.value;
     if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
-    closedViewToken++;
+    closedViewToken++; // invalidate any in-flight closed-game fetches from the previous selection
     if (!code) { dynamicGameArea.innerHTML = ''; return; }
     const match = gamesList.find(g => g.game_code === code);
     if (!match) return;
@@ -904,7 +883,7 @@
   loadGamesDropdown();
 
   // ==================================================================
-  // OPEN GAME VIEW
+  // OPEN GAME VIEW — entry form
   // ==================================================================
   function renderOpenGame(code) {
     const match = gamesList.find(g => g.game_code === code) || {};
@@ -951,13 +930,13 @@
         const res = await fetch(`/api/game-status/${encodeURIComponent(code)}`);
         const data = await res.json();
         const badge = document.getElementById('statusBadge');
-        if (!badge) return;
+        if (!badge) return; // view has changed since this poll started
         isClosed = data.status === 'closed';
         badge.textContent = isClosed ? 'Entries Closed' : 'Open';
         badge.classList.toggle('open', !isClosed);
         badge.classList.toggle('closed', isClosed);
       } catch (err) {
-        // fallback
+        // silent - try again next poll
       }
     }
     pollStatus();
@@ -969,7 +948,9 @@
       btn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(code);
-        } catch (err) {}
+        } catch (err) {
+          // clipboard API unavailable - field is already filled below regardless
+        }
         const originalText = btn.textContent;
         btn.textContent = 'Copied!';
         btn.classList.add('copied');
@@ -1040,7 +1021,7 @@
   }
 
   // ==================================================================
-  // CLOSED GAME VIEW
+  // CLOSED GAME VIEW — Quarter Winners + Total Points + Prize 2
   // ==================================================================
   function renderClosedGame(code) {
     const match = gamesList.find(g => g.game_code === code) || {};
@@ -1087,6 +1068,9 @@
     boardWrap.innerHTML = '<div class="empty-state">Loading...</div>';
     prize2Wrap.innerHTML = '<div class="empty-state">Loading...</div>';
 
+    // Quarter Winners — also determines whether the game is actually
+    // finished (all 4 quarters decided), which gates the Winner badge and
+    // claim-status messaging below.
     let quarterData = [];
     try {
       const qRes = await fetch(`/api/quarter-leaders/${encodeURIComponent(code)}`);
@@ -1157,7 +1141,9 @@
                   : `<div class="claim-status not-claimed">⚠️ Failed to text and claim prize</div>`;
               }
             }
-          } catch (err) {}
+          } catch (err) {
+            // silent
+          }
         }
       }
     } catch (err) {
@@ -1184,111 +1170,95 @@
     }
   }
 
-  // ====================================================================
-  // STORIES DECK SYSTEM CONTROL INTERACTION
-  // ====================================================================
-  const interactiveUnderlay = document.getElementById('interactiveUnderlay');
-  const interactiveDeck = document.getElementById('interactiveDeck');
-  const dismissInteractiveBtn = document.getElementById('dismissInteractiveBtn');
-  const interactiveSlides = document.querySelectorAll('.slide');
-  const prevInteractiveSlide = document.getElementById('prevInteractiveSlide');
-  const nextInteractiveSlide = document.getElementById('nextInteractiveSlide');
-  const interactiveDotsWrap = document.getElementById('interactiveDotsWrap');
-  const progressContainer = document.getElementById('story-progress');
+  // ==================================================================
+  // HOW TO PLAY slideshow (namespaced htp* to avoid clashing with the
+  // existing openModal/closeModal system used elsewhere on this page)
+  // ==================================================================
+  const htpOpenBtn = document.getElementById('htpOpenBtn');
+  const htpDismissBtn = document.getElementById('htpDismissBtn');
+  const htpUnderlay = document.getElementById('htpUnderlay');
+  const htpDeck = document.getElementById('htpDeck');
+  const htpSlides = document.querySelectorAll('.htp-slide');
+  const htpPrevBtn = document.getElementById('htpPrevBtn');
+  const htpNextBtn = document.getElementById('htpNextBtn');
+  const htpDotsWrap = document.getElementById('htpDotsWrap');
+  const htpProgressContainer = document.getElementById('htpProgress');
 
-  let interactiveIndex = 0;
+  let htpCurrentIndex = 0;
 
-  function setVh() {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--safe-vh', `${vh}px`);
-  }
-  window.addEventListener('resize', setVh);
-  window.addEventListener('orientationchange', setVh);
-  setVh();
-
-  // Programmatically setup indicator segments
-  interactiveSlides.forEach((_, idx) => {
+  htpSlides.forEach((_, idx) => {
     const dot = document.createElement('div');
-    dot.classList.add('dot');
+    dot.classList.add('htp-dot');
     if (idx === 0) dot.classList.add('active');
-    interactiveDotsWrap.appendChild(dot);
+    htpDotsWrap.appendChild(dot);
 
     const segment = document.createElement('div');
-    segment.classList.add('progress-bar-segment');
+    segment.classList.add('htp-progress-segment');
     if (idx === 0) segment.classList.add('active');
-    
     const fill = document.createElement('div');
-    fill.classList.add('progress-bar-fill');
+    fill.classList.add('htp-progress-fill');
     segment.appendChild(fill);
-    progressContainer.appendChild(segment);
+    htpProgressContainer.appendChild(segment);
   });
 
-  const interactiveDots = document.querySelectorAll('.dots-indicator-container .dot');
-  const segments = document.querySelectorAll('.progress-bar-segment');
+  const htpDots = document.querySelectorAll('.htp-dot');
+  const htpSegments = document.querySelectorAll('.htp-progress-segment');
 
-  function openInteractiveDeck() {
-    interactiveUnderlay.classList.add('active');
-    interactiveDeck.classList.add('active');
-    interactiveIndex = 0;
-    updateInteractiveSlider();
+  htpOpenBtn.addEventListener('click', () => {
+    htpUnderlay.classList.add('active');
+    htpDeck.classList.add('active');
+    htpCurrentIndex = 0;
+    htpUpdateSlider();
+  });
+
+  function htpCloseDeck() {
+    htpUnderlay.classList.remove('active');
+    htpDeck.classList.remove('active');
   }
+  htpDismissBtn.addEventListener('click', htpCloseDeck);
+  htpUnderlay.addEventListener('click', htpCloseDeck);
 
-  function closeInteractiveDeck() {
-    interactiveUnderlay.classList.remove('active');
-    interactiveDeck.classList.remove('active');
-  }
-
-  dismissInteractiveBtn.addEventListener('click', closeInteractiveDeck);
-  interactiveUnderlay.addEventListener('click', closeInteractiveDeck);
-
-  function updateInteractiveSlider() {
-    interactiveSlides.forEach((slide, idx) => {
+  function htpUpdateSlider() {
+    htpSlides.forEach((slide, idx) => {
       slide.classList.remove('active');
-      interactiveDots[idx].classList.remove('active');
-      
-      segments[idx].classList.remove('active', 'viewed');
-      if (idx < interactiveIndex) {
-        segments[idx].classList.add('viewed');
-      } else if (idx === interactiveIndex) {
-        segments[idx].classList.add('active');
+      htpDots[idx].classList.remove('active');
+      htpSegments[idx].classList.remove('active', 'viewed');
+      if (idx < htpCurrentIndex) {
+        htpSegments[idx].classList.add('viewed');
+      } else if (idx === htpCurrentIndex) {
+        htpSegments[idx].classList.add('active');
       }
     });
-
-    interactiveSlides[interactiveIndex].classList.add('active');
-    interactiveDots[interactiveIndex].classList.add('active');
+    htpSlides[htpCurrentIndex].classList.add('active');
+    htpDots[htpCurrentIndex].classList.add('active');
   }
 
-  nextInteractiveSlide.addEventListener('click', () => {
-    interactiveIndex = (interactiveIndex + 1) % interactiveSlides.length;
-    updateInteractiveSlider();
+  htpNextBtn.addEventListener('click', () => {
+    htpCurrentIndex = (htpCurrentIndex + 1) % htpSlides.length;
+    htpUpdateSlider();
+  });
+  htpPrevBtn.addEventListener('click', () => {
+    htpCurrentIndex = (htpCurrentIndex - 1 + htpSlides.length) % htpSlides.length;
+    htpUpdateSlider();
   });
 
-  prevInteractiveSlide.addEventListener('click', () => {
-    interactiveIndex = (interactiveIndex - 1 + interactiveSlides.length) % interactiveSlides.length;
-    updateInteractiveSlider();
+  let htpTouchStart = 0;
+  let htpTouchEnd = 0;
+  htpDeck.addEventListener('touchstart', e => {
+    htpTouchStart = e.changedTouches[0].screenX;
   });
-
-  // Touch Drag / Mobile Swipes Implementation
-  let touchStartX = 0;
-  let touchEndX = 0;
-  
-  interactiveDeck.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].screenX;
-  }, { passive: true });
-
-  interactiveDeck.addEventListener('touchend', e => {
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipeGesture();
-  }, { passive: true });
-
-  function handleSwipeGesture() {
-    const delta = touchStartX - touchEndX;
-    if (delta > 45) {
-      interactiveIndex = (interactiveIndex + 1) % interactiveSlides.length;
-      updateInteractiveSlider();
-    } else if (delta < -45) {
-      interactiveIndex = (interactiveIndex - 1 + interactiveSlides.length) % interactiveSlides.length;
-      updateInteractiveSlider();
+  htpDeck.addEventListener('touchend', e => {
+    htpTouchEnd = e.changedTouches[0].screenX;
+    htpHandleSwipe();
+  });
+  function htpHandleSwipe() {
+    const diff = htpTouchStart - htpTouchEnd;
+    if (diff > 50) {
+      htpCurrentIndex = (htpCurrentIndex + 1) % htpSlides.length;
+      htpUpdateSlider();
+    } else if (diff < -50) {
+      htpCurrentIndex = (htpCurrentIndex - 1 + htpSlides.length) % htpSlides.length;
+      htpUpdateSlider();
     }
   }
 </script>
