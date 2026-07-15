@@ -129,16 +129,34 @@
   }
 
   .prizes {
-    font-size: 0.88rem;
-    line-height: 1.6;
-    font-weight: 700;
-    margin: 20px 0 18px;
-    text-align: center;
+    margin: 20px 0 4px;
   }
-  .prize-img {
-    display: block;
-    width: 100%;
-    border-radius: 6px;
+  .prize-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: #f7f7f7;
+    border: 3px solid #000;
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .prize-row-text {
+    font-size: 0.92rem;
+    line-height: 1.4;
+    font-weight: 700;
+  }
+  .prize-row-text strong {
+    font-size: 1.02rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .prize-row-img {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .ticker {
@@ -239,6 +257,14 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0 0 12px;
+  }
+  .results-toggle-btn {
+    background: #fff;
+    color: var(--text);
+    border: 3px solid #000;
+    font-size: 0.85rem;
+    padding: 14px 10px;
+    margin-bottom: 12px;
   }
   .game-item {
     background: #f7f7f7;
@@ -674,6 +700,17 @@
   <div class="card">
     <img class="logo" src="/holding_logo.png" alt="HOLDING">
 
+    <div class="prizes">
+      <div class="prize-row">
+        <div class="prize-row-text"><strong>Prize 1</strong><br>Highest Total Points after 4 quarters</div>
+        <img class="prize-row-img" src="/6pack.png" alt="6 pack of Guinness cans">
+      </div>
+      <div class="prize-row">
+        <div class="prize-row-text"><strong>Prize 2</strong><br>All 4 of your players hold the ball</div>
+        <img class="prize-row-img" src="/carton_of_guinness_cans.png" alt="Carton of Guinness cans">
+      </div>
+    </div>
+
     <button type="button" class="htp-cta-btn" id="htpOpenBtn">HOW TO PLAY</button>
 
     <div class="games-available">
@@ -683,12 +720,14 @@
       </select>
     </div>
 
-    <div id="dynamicGameArea"></div>
-
-    <div class="prizes">
-      Prize 1: Highest Total Points after 4 quarters. 1 x 6 Pack of Guinness Cans<br>
-      Prize 2: All 4 of your players hold the ball - 1 x Carton of Guinness Cans
+    <button type="button" class="results-toggle-btn" id="resultsToggleBtn">📊 Resulted Games</button>
+    <div class="games-available" id="resultsDropdownWrap" style="display:none;">
+      <select id="resultsSelect">
+        <option value="">-- Select a past game --</option>
+      </select>
     </div>
+
+    <div id="dynamicGameArea"></div>
 
     <div class="ticker">
       <div class="ticker-track">
@@ -696,8 +735,6 @@
         <span>Prizes brought to you by Black Sheep Bottleo The Gap</span>
       </div>
     </div>
-
-    <img class="prize-img" src="/carton_of_guinness_cans.png" alt="Guinness Draught 24 pack prize">
 
     <div class="info-buttons">
       <button type="button" id="rulesBtn">Rules</button>
@@ -838,7 +875,11 @@
     });
   });
 
-  // ---- Populate the dropdown, grouped by round ----
+  // ---- Populate the two dropdowns: open games for entry, closed games for results ----
+  const resultsSelect = document.getElementById('resultsSelect');
+  const resultsToggleBtn = document.getElementById('resultsToggleBtn');
+  const resultsDropdownWrap = document.getElementById('resultsDropdownWrap');
+
   async function loadGamesDropdown() {
     try {
       const res = await fetch('/api/games');
@@ -848,36 +889,55 @@
       const open = gamesList.filter(g => g.status === 'open');
       const closed = gamesList.filter(g => g.status === 'closed');
 
-      function optionsFor(games) {
-        return games.map(g => {
-          const label = g.round
-            ? `${g.display_name || g.game_code} (${g.round})`
-            : (g.display_name || g.game_code);
+      // "Games available to enter" — just the open ones, flat list.
+      gameSelect.innerHTML = '<option value="">-- Select a game --</option>' +
+        open.map(g => {
+          const label = g.round ? `${g.display_name || g.game_code} (${g.round})` : (g.display_name || g.game_code);
           return `<option value="${g.game_code}">${label}</option>`;
         }).join('');
-      }
 
-      let html = '<option value="">-- Select a game --</option>';
-      if (open.length) html += `<optgroup label="Open">${optionsFor(open)}</optgroup>`;
-      if (closed.length) html += `<optgroup label="Closed">${optionsFor(closed)}</optgroup>`;
-      gameSelect.innerHTML = html;
+      // "Resulted Games" — closed games, grouped by round.
+      const byRound = {};
+      closed.forEach(g => {
+        const round = g.round || 'Other';
+        if (!byRound[round]) byRound[round] = [];
+        byRound[round].push(g);
+      });
+      let resultsHtml = '<option value="">-- Select a past game --</option>';
+      for (const round of Object.keys(byRound)) {
+        resultsHtml += `<optgroup label="${round}">`;
+        resultsHtml += byRound[round].map(g =>
+          `<option value="${g.game_code}">${g.display_name || g.game_code}</option>`
+        ).join('');
+        resultsHtml += '</optgroup>';
+      }
+      resultsSelect.innerHTML = resultsHtml;
     } catch (err) {
       // silent
     }
   }
 
+  resultsToggleBtn.addEventListener('click', () => {
+    const showing = resultsDropdownWrap.style.display !== 'none';
+    resultsDropdownWrap.style.display = showing ? 'none' : 'block';
+  });
+
   gameSelect.addEventListener('change', () => {
     const code = gameSelect.value;
     if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
-    closedViewToken++; // invalidate any in-flight closed-game fetches from the previous selection
+    closedViewToken++;
     if (!code) { dynamicGameArea.innerHTML = ''; return; }
-    const match = gamesList.find(g => g.game_code === code);
-    if (!match) return;
-    if (match.status === 'closed') {
-      renderClosedGame(code);
-    } else {
-      renderOpenGame(code);
-    }
+    resultsSelect.value = ''; // clear the other dropdown so it's clear which is active
+    renderOpenGame(code);
+  });
+
+  resultsSelect.addEventListener('change', () => {
+    const code = resultsSelect.value;
+    if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
+    closedViewToken++;
+    if (!code) { dynamicGameArea.innerHTML = ''; return; }
+    gameSelect.value = ''; // clear the other dropdown so it's clear which is active
+    renderClosedGame(code);
   });
 
   loadGamesDropdown();
