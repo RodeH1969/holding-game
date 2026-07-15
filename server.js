@@ -302,9 +302,6 @@ app.post('/admin/games', checkAdminPassword, async (req, res) => {
   if (!gameCode) {
     return res.status(400).json({ error: 'game_code is required.' });
   }
-  if (!gamesCombos[gameCode]) {
-    return res.status(400).json({ error: `No combos file found for ${gameCode}. Add combos/${gameCode}.txt and restart the server first.` });
-  }
 
   const { data: existing, error: fetchErr } = await supabase
     .from('holding_games')
@@ -315,12 +312,20 @@ app.post('/admin/games', checkAdminPassword, async (req, res) => {
   if (fetchErr) return res.status(500).json({ error: fetchErr.message });
 
   if (existing) {
+    // Editing an already-known game (e.g. fixing its display name/round) —
+    // doesn't need the combos file to still exist, since it's not being
+    // used to hand out new entries by this action.
     const { error } = await supabase
       .from('holding_games')
       .update({ display_name: displayName, round, event_datetime: eventDatetime })
       .eq('game_code', gameCode);
     if (error) return res.status(500).json({ error: error.message });
   } else {
+    // Creating a brand new game — this one does need a real combos file,
+    // otherwise there'd be nothing to hand out when people register.
+    if (!gamesCombos[gameCode]) {
+      return res.status(400).json({ error: `No combos file found for ${gameCode}. Add combos/${gameCode}.txt and restart the server first.` });
+    }
     const { error } = await supabase
       .from('holding_games')
       .insert({
