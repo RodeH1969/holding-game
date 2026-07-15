@@ -32,6 +32,22 @@
     max-width: 230px;
     margin: 8px auto 24px;
   }
+  .logo-big {
+    display: block;
+    width: 85%;
+    max-width: 320px;
+    margin: 8px auto 12px;
+  }
+  .logo-pulse {
+    animation: logo-pulse-scale 1.6s ease-in-out infinite;
+  }
+  @keyframes logo-pulse-scale {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo-pulse { animation: none; }
+  }
   form { margin-bottom: 20px; }
   input, select {
     width: 100%;
@@ -698,7 +714,8 @@
 </head>
 <body>
   <div class="card">
-    <img class="logo" src="/holding_logo.png" alt="HOLDING">
+    <img class="logo-big" src="/holding_logo%201.png" alt="HOLDING">
+    <img class="logo logo-pulse" src="/holding_logo%202.png" alt="HOLDING">
 
     <div class="prizes">
       <div class="prize-row">
