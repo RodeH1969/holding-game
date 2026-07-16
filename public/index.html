@@ -465,6 +465,14 @@
     font-size: 0.82rem;
     font-weight: 700;
   }
+  .share-squad-btn {
+    margin-top: 14px;
+    background: #000;
+    color: #fff;
+    border: 3px solid #000;
+    font-size: 0.9rem;
+    padding: 14px 16px;
+  }
   .winner-badge {
     display: inline-block;
     background: #ffd700;
@@ -1016,11 +1024,53 @@
           <div class="registered-chips">
             ${handles.map(h => `<span class="registered-chip">${h}</span>`).join('')}
           </div>
+          <button type="button" class="share-squad-btn" id="shareSquadBtn">📤 Share the Squad</button>
         </div>
       `;
+
+      const shareBtn = document.getElementById('shareSquadBtn');
+      if (shareBtn) {
+        shareBtn.addEventListener('click', () => shareSquad(code, handles));
+      }
     } catch (err) {
       const target = document.getElementById('registeredWrap');
       if (target) target.innerHTML = '<div class="empty-state">Network error.</div>';
+    }
+  }
+
+  async function shareSquad(code, handles) {
+    const match = gamesList.find(g => g.game_code === code) || {};
+    const gameName = match.display_name || code;
+    const siteUrl = window.location.origin;
+
+    // Wordle-style visual squad indicator - a row of football emoji, one
+    // per registered player, capped so it doesn't get silly for big crowds.
+    const capped = Math.min(handles.length, 20);
+    const emojiRow = '🏈'.repeat(capped) + (handles.length > 20 ? ` +${handles.length - 20}` : '');
+
+    const namesPreview = handles.slice(0, 12).join(', ') + (handles.length > 12 ? `, +${handles.length - 12} more` : '');
+
+    const shareText = `🏈 HOLDING — ${gameName}\n${emojiRow}\n${handles.length} locked in: ${namesPreview}\n\nJoin the squad → ${siteUrl}\nCode: ${code}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText, url: siteUrl });
+      } catch (err) {
+        // user cancelled the share sheet - nothing to do
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareText);
+      const btn = document.getElementById('shareSquadBtn');
+      if (btn) {
+        const original = btn.textContent;
+        btn.textContent = 'Copied! Paste it anywhere 📋';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      }
+    } catch (err) {
+      alert(shareText);
     }
   }
 
