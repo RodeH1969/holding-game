@@ -438,6 +438,33 @@
     border-radius: 14px;
     margin-bottom: 10px;
   }
+  .registered-box {
+    border: 3px solid #000;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .registered-count {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .registered-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .registered-chip {
+    background: #f7f7f7;
+    border: 2px solid #000;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
   .winner-badge {
     display: inline-block;
     background: #ffd700;
@@ -969,6 +996,34 @@
 
   loadGamesDropdown();
 
+  // Shared by both open and closed game views.
+  async function loadRegisteredPlayers(code) {
+    const wrap = document.getElementById('registeredWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const res = await fetch(`/api/registered/${encodeURIComponent(code)}`);
+      const handles = await res.json();
+      const target = document.getElementById('registeredWrap');
+      if (!target) return; // view changed while this was loading
+      if (!res.ok || !handles.length) {
+        target.innerHTML = '<div class="empty-state">No one has registered yet.</div>';
+        return;
+      }
+      target.innerHTML = `
+        <div class="registered-box">
+          <div class="registered-count">${handles.length} registered</div>
+          <div class="registered-chips">
+            ${handles.map(h => `<span class="registered-chip">${h}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      const target = document.getElementById('registeredWrap');
+      if (target) target.innerHTML = '<div class="empty-state">Network error.</div>';
+    }
+  }
+
   // ==================================================================
   // OPEN GAME VIEW — entry form
   // ==================================================================
@@ -1006,10 +1061,14 @@
       </div>
 
       <a class="leaderboard-link" href="/leaderboard.html?code=${code}">View Leaderboard →</a>
+
+      <div class="section-title">Registered Players</div>
+      <div id="registeredWrap"></div>
     `;
 
     wireCopyButton(code);
     wireEntryForm(code);
+    loadRegisteredPlayers(code);
 
     let isClosed = false;
     async function pollStatus() {
@@ -1101,6 +1160,7 @@
           document.getElementById('handle').value = '';
           document.getElementById('phone').value = '';
           openModal('screenshotModal');
+          loadRegisteredPlayers(code);
         } catch (err) {
           messageEl.textContent = 'Network error. Try again.';
         } finally {
@@ -1144,9 +1204,13 @@
       <div id="prize2WrapMain"></div>
 
       <a class="leaderboard-link" href="/leaderboard.html?code=${code}">View Full Leaderboard →</a>
+
+      <div class="section-title">Registered Players</div>
+      <div id="registeredWrap"></div>
     `;
 
     loadClosedGameData(code, myToken);
+    loadRegisteredPlayers(code);
   }
 
   async function loadClosedGameData(code, myToken) {

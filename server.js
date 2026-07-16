@@ -209,6 +209,19 @@ app.get('/api/leaderboard/:code', async (req, res) => {
   res.json(leaderboard);
 });
 
+// ---------- Public: registered handles for a game (no phone numbers) ----------
+app.get('/api/registered/:code', async (req, res) => {
+  const gameCode = String(req.params.code || '').trim().toUpperCase();
+  const { data, error } = await supabase
+    .from('holding_entries')
+    .select('handle')
+    .eq('game_code', gameCode);
+
+  if (error) return res.status(500).json({ error: error.message });
+  const handles = [...new Set(data.map((r) => r.handle).filter(Boolean))].sort();
+  res.json(handles);
+});
+
 // ---------- Public: prize claim status for a game ----------
 app.get('/api/prize-claims/:code', async (req, res) => {
   const gameCode = String(req.params.code || '').trim().toUpperCase();
