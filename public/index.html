@@ -503,6 +503,12 @@
     margin-left: 6px;
     border-radius: 4px;
   }
+  .referral-note {
+    font-size: 0.75rem;
+    color: #157a3e;
+    font-weight: 700;
+    margin-top: 4px;
+  }
   .prize2-box {
     margin-bottom: 10px;
     border: 3px solid #000;
@@ -977,6 +983,26 @@
         resultsHtml += '</optgroup>';
       }
       resultsSelect.innerHTML = resultsHtml;
+
+      // Deep-link support: ?code=GAMECODE auto-selects that game (used by
+      // the Share Squad button and QR codes/posters), and ?ref=HANDLE
+      // pre-fills the "Invited by" field once the entry form is showing.
+      const params = new URLSearchParams(window.location.search);
+      const linkedCode = params.get('code');
+      const linkedRef = params.get('ref');
+      if (linkedCode) {
+        const match = open.find(g => g.game_code === linkedCode.toUpperCase());
+        if (match) {
+          gameSelect.value = match.game_code;
+          renderOpenGame(match.game_code);
+          if (linkedRef) {
+            setTimeout(() => {
+              const refField = document.getElementById('referredBy');
+              if (refField) refField.value = linkedRef;
+            }, 0);
+          }
+        }
+      }
     } catch (err) {
       // silent
     }
@@ -1044,7 +1070,7 @@
   async function shareSquad(code, handles) {
     const match = gamesList.find(g => g.game_code === code) || {};
     const gameName = match.display_name || code;
-    const siteUrl = window.location.origin;
+    const joinUrl = `${window.location.origin}/?code=${encodeURIComponent(code)}`;
 
     // Wordle-style visual squad indicator - a row of football emoji, one
     // per registered player, capped so it doesn't get silly for big crowds.
@@ -1053,11 +1079,11 @@
 
     const namesPreview = handles.slice(0, 12).join(', ') + (handles.length > 12 ? `, +${handles.length - 12} more` : '');
 
-    const shareText = `🏈 HOLDING — ${gameName}\n${emojiRow}\n${handles.length} locked in: ${namesPreview}\n\nJoin the squad → ${siteUrl}\nCode: ${code}`;
+    const shareText = `🏈 HOLDING — ${gameName}\n${emojiRow}\n${handles.length} locked in: ${namesPreview}\n\n🎁 If you win, so does whoever invited you! When you register, pop in the handle of whoever sent you this.\n\nJoin the squad → ${joinUrl}\nCode: ${code}`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ text: shareText, url: siteUrl });
+        await navigator.share({ text: shareText, url: joinUrl });
       } catch (err) {
         // user cancelled the share sheet - nothing to do
       }
@@ -1103,6 +1129,7 @@
         <input type="text" id="gameCode" value="${code}" readonly>
         <input type="text" id="handle" class="input-pulse" placeholder="Handle (shown on leaderboard) *" autocomplete="off">
         <input type="tel" id="phone" class="input-pulse" placeholder="Mobile *" autocomplete="off">
+        <input type="text" id="referredBy" placeholder="Invited by (their Handle) - optional" autocomplete="off">
         <button type="submit" id="submitBtn">Get My 4 Players</button>
       </form>
 
@@ -1179,6 +1206,7 @@
         const game_code = code;
         const handle = document.getElementById('handle').value.trim();
         const phone = document.getElementById('phone').value.trim();
+        const referred_by = document.getElementById('referredBy').value.trim();
 
         if (!game_code || !handle || !phone) {
           openModal('validationModal');
@@ -1197,7 +1225,7 @@
           const res = await fetch('/api/enter', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ game_code, handle, phone })
+            body: JSON.stringify({ game_code, handle, phone, referred_by })
           });
           const data = await res.json();
 
@@ -1212,6 +1240,7 @@
           resultEl.classList.add('show');
           document.getElementById('handle').value = '';
           document.getElementById('phone').value = '';
+          document.getElementById('referredBy').value = '';
           openModal('screenshotModal');
           loadRegisteredPlayers(code);
         } catch (err) {
@@ -1319,10 +1348,13 @@
       } else {
         const rows = data.map((row, i) => {
           const showWinnerBadge = i === 0 && gameComplete;
+          const referralNote = showWinnerBadge && row.referred_by
+            ? `<div class="referral-note">🎁 Invited by <strong>${row.referred_by}</strong> — they win an equivalent prize too!</div>`
+            : '';
           return `
             <tr>
               <td class="rank">${i + 1}</td>
-              <td>${row.handle}${showWinnerBadge ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
+              <td>${row.handle}${showWinnerBadge ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}${referralNote}</td>
               <td class="points">${row.points}</td>
             </tr>
           `;

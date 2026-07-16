@@ -91,6 +91,7 @@ app.post('/api/enter', async (req, res) => {
     const gameCode = String(req.body.game_code || '').trim().toUpperCase();
     const phone = normalisePhone(req.body.phone);
     const handle = String(req.body.handle || '').trim();
+    const referredBy = String(req.body.referred_by || '').trim() || null;
 
     if (!gameCode) {
       return res.status(400).json({ error: 'Enter a game code.' });
@@ -146,6 +147,7 @@ app.post('/api/enter', async (req, res) => {
       game_code: gameCode,
       phone,
       handle,
+      referred_by: referredBy,
       combo_index: nextIndex,
       combo_text: players.join('|'),
     });
@@ -205,6 +207,18 @@ app.get('/api/leaderboard/:code', async (req, res) => {
   const leaderboard = Object.entries(totals)
     .map(([handle, points]) => ({ handle, points }))
     .sort((a, b) => b.points - a.points || a.handle.localeCompare(b.handle));
+
+  // Attach who referred each handle, if anyone — so a winner's referrer
+  // shows up automatically instead of relying on screenshots.
+  if (leaderboard.length) {
+    const { data: entries } = await supabase
+      .from('holding_entries')
+      .select('handle, referred_by')
+      .eq('game_code', gameCode);
+    const referrerByHandle = {};
+    (entries || []).forEach((e) => { referrerByHandle[e.handle] = e.referred_by; });
+    leaderboard.forEach((row) => { row.referred_by = referrerByHandle[row.handle] || null; });
+  }
 
   res.json(leaderboard);
 });
@@ -464,7 +478,7 @@ app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
 
     let query = supabase
       .from('holding_entries')
-      .select('game_code, phone, handle, combo_text, created_at')
+      .select('game_code, phone, handle, referred_by, combo_text, created_at')
       .order('created_at', { ascending: true });
 
     if (gameCode !== 'ALL') {
@@ -479,6 +493,7 @@ app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
     sheet.columns = [
       { header: 'Game Code', key: 'game_code', width: 14 },
       { header: 'Handle', key: 'handle', width: 16 },
+      { header: 'Invited By', key: 'referred_by', width: 16 },
       { header: 'Phone', key: 'phone', width: 16 },
       { header: 'Player 1', key: 'p1', width: 20 },
       { header: 'Player 2', key: 'p2', width: 20 },
@@ -493,6 +508,7 @@ app.get('/admin/export.xlsx', checkAdminPassword, async (req, res) => {
       sheet.addRow({
         game_code: row.game_code,
         handle: row.handle || '',
+        referred_by: row.referred_by || '',
         phone: row.phone,
         p1,
         p2,

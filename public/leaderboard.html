@@ -133,6 +133,12 @@
     margin-left: 6px;
     border-radius: 4px;
   }
+  .referral-note {
+    font-size: 0.78rem;
+    color: #157a3e;
+    font-weight: 700;
+    margin-top: 4px;
+  }
 
   .prize2-box {
     margin-top: 16px;
@@ -438,10 +444,13 @@
       } else {
         const rows = data.map((row, i) => {
           const showWinnerBadge = i === 0 && gameComplete;
+          const referralNote = showWinnerBadge && row.referred_by
+            ? `<div class="referral-note">🎁 Invited by <strong>${row.referred_by}</strong> — they win an equivalent prize too!</div>`
+            : '';
           return `
             <tr>
               <td class="rank">${i + 1}</td>
-              <td>${row.handle}${showWinnerBadge ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}</td>
+              <td>${row.handle}${showWinnerBadge ? ' <span class="winner-badge">🏆 WINNER</span><img class="prize-thumb" src="/6pack.png" alt="6 pack of Guinness cans">' : ''}${referralNote}</td>
               <td class="points">${row.points}</td>
             </tr>
           `;
